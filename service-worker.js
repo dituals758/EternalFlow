@@ -1,15 +1,14 @@
-const CACHE_NAME = 'eternal-flow-v1.3';
+const CACHE_NAME = 'eternal-flow-v1.4';
 const PRECACHE_URLS = [
-  '/',
-  '/index.html',
-  '/styles.css',
-  '/app.js',
-  '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png'
+  './',
+  './index.html',
+  './styles.css',
+  './app.js',
+  './manifest.json',
+  './icon-192.png',
+  './icon-512.png'
 ];
 
-// Установочная фаза: кэшируем ключевые файлы
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -18,7 +17,6 @@ self.addEventListener('install', event => {
   );
 });
 
-// Активация: удаляем старые кэши, если есть новые версии
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(cacheNames => {
@@ -33,35 +31,32 @@ self.addEventListener('activate', event => {
   );
 });
 
-// Обработка сетевых запросов
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
-
+  
   event.respondWith(
     caches.match(event.request)
       .then(cachedResponse => {
         if (cachedResponse) return cachedResponse;
-
+        
         return fetch(event.request)
           .then(response => {
-          
             if (!response || response.status !== 200 || response.type !== 'basic') {
               return response;
             }
-
+            
             const responseToCache = response.clone();
             caches.open(CACHE_NAME)
               .then(cache => cache.put(event.request, responseToCache));
-
+            
             return response;
           });
       })
   );
 });
 
-// Сообщения от страниц (skipWaiting)
 self.addEventListener('message', event => {
-  if (event.data && event.data.action === 'skipWaiting') {
+  if (event.data?.action === 'skipWaiting') {
     self.skipWaiting();
   }
 });

@@ -87,8 +87,8 @@
 
             <div class="app-info" aria-label="Информация об aplicativo">
                 <p>Данные хранятся только на вашем устройстве - 100% конфиденциальность</p>
-                <p>Разработано c помошью gpt-5-nano. Дизайн иконки shedevrum.ai.</p>
-                <p>Eternal Flow v1.3 &copy; 2025 • <a href="https://github.com/dituals758/EternalFlow" class="github-link" target="_blank" rel="noopener">GitHub</a></p>
+                <p>Разработано с помощью gpt-5-nano. Дизайн иконки shedevrum.ai.</p>
+                <p>Eternal Flow v1.4 &copy; 2025. <a href="https://github.com/dituals758/EternalFlow" class="github-link" target="_blank" rel="noopener">GitHub</a></p>
             </div>
         </main>
     </div>
@@ -96,20 +96,5 @@
     <div class="notification" id="notification" role="status" aria-live="polite"></div>
 
     <script type="module" src="./app.js"></script>
-    <script>
-        // Установка динамического острова (PWA) будет инициирована внутри app.js
-        // По умолчанию скрипт активен после загрузки модуля.
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./service-worker.js')
-                    .then(() => {
-                        // зарегестрирован
-                    })
-                    .catch(() => {
-                        // ошибка регистрации
-                    });
-            });
-        }
-    </script>
 </body>
 </html>
