@@ -14,6 +14,7 @@ export class EternalFlowApp {
         };
         this.events = [];
         this.deferredPrompt = null;
+        this.timerUpdateInterval = null;
         this.init();
     }
 
@@ -28,23 +29,32 @@ export class EternalFlowApp {
     }
 
     setupInstallPrompt() {
+        const handleInstallClick = async () => {
+            if (!this.deferredPrompt) return;
+            
+            try {
+                this.deferredPrompt.prompt();
+                const { outcome } = await this.deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    this.showNotification('Приложение установлено!', 'success');
+                }
+            } catch (error) {
+                console.error('Ошибка установки:', error);
+                this.showNotification('Ошибка установки', 'error');
+            } finally {
+                this.deferredPrompt = null;
+                const island = document.getElementById('dynamicIsland');
+                if (island) island.style.display = 'none';
+            }
+        };
+
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             this.deferredPrompt = e;
             const island = document.getElementById('dynamicIsland');
             if (island) {
                 island.style.display = 'flex';
-                island.addEventListener('click', async () => {
-                    if (this.deferredPrompt) {
-                        this.deferredPrompt.prompt();
-                        const { outcome } = await this.deferredPrompt.userChoice;
-                        if (outcome === 'accepted') {
-                            this.showNotification('Приложение установлено!', 'success');
-                        }
-                        this.deferredPrompt = null;
-                        island.style.display = 'none';
-                    }
-                });
+                island.addEventListener('click', handleInstallClick);
             }
         });
     }
@@ -101,6 +111,7 @@ export class EternalFlowApp {
                 if (Array.isArray(parsed)) {
                     this.events = parsed.filter(e => 
                         e.id && e.title && e.date && !isNaN(new Date(e.date).getTime())
+                    );
                 }
             }
         } catch (err) {
@@ -123,7 +134,7 @@ export class EternalFlowApp {
     setupEventListeners() {
         const saveBtn = document.getElementById('saveEventBtn');
         if (saveBtn) {
-            saveBtn.addEventListener('click', this.saveEvent.bind(this));
+            saveBtn.addEventListener('click', () => this.saveEvent());
         }
         
         const titleInput = document.getElementById('eventTitle');
@@ -136,8 +147,8 @@ export class EternalFlowApp {
         const importBtn = document.getElementById('importBtn');
         const exportBtn = document.getElementById('exportBtn');
         
-        if (importBtn) importBtn.addEventListener('click', this.importEvents.bind(this));
-        if (exportBtn) exportBtn.addEventListener('click', this.exportEvents.bind(this));
+        if (importBtn) importBtn.addEventListener('click', () => this.importEvents());
+        if (exportBtn) exportBtn.addEventListener('click', () => this.exportEvents());
     }
 
     saveEvent() {
@@ -244,22 +255,28 @@ export class EternalFlowApp {
                     this.deleteEvent(eventId);
                 });
             }
-            
-            this.updateTimer(event.id);
         });
     }
 
     startTimers() {
-        const update = () => {
-            this.events.forEach(event => {
-                const timerEl = document.getElementById(`timer-${event.id}`);
-                if (timerEl) {
-                    this.updateTimer(event.id);
-                }
-            });
-            requestAnimationFrame(update);
-        };
-        update();
+        // Остановить предыдущий интервал, если существует
+        if (this.timerUpdateInterval) {
+            clearInterval(this.timerUpdateInterval);
+        }
+        
+        // Обновляем все таймеры сразу
+        this.updateAllTimers();
+        
+        // Затем обновляем каждую секунду
+        this.timerUpdateInterval = setInterval(() => {
+            this.updateAllTimers();
+        }, 1000);
+    }
+
+    updateAllTimers() {
+        this.events.forEach(event => {
+            this.updateTimer(event.id);
+        });
     }
 
     updateTimer(eventId) {
@@ -439,8 +456,14 @@ export class EternalFlowApp {
         notification.innerHTML = `${icon} ${message}`;
         notification.className = `notification ${type} show`;
         
-        setTimeout(() => {
+        // Очищаем предыдущий таймаут
+        if (notification.timeoutId) {
+            clearTimeout(notification.timeoutId);
+        }
+        
+        notification.timeoutId = setTimeout(() => {
             notification.classList.remove('show');
+            notification.timeoutId = null;
         }, 3000);
     }
 
@@ -453,7 +476,13 @@ export class EternalFlowApp {
     setupServiceWorker() {
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('./service-worker.js')
-                .catch(err => console.error('Service Worker registration failed:', err));
+                .then(registration => {
+                    console.log('Service Worker зарегистрирован:', registration);
+                })
+                .catch(err => {
+                    console.error('Ошибка регистрации Service Worker:', err);
+                    this.showNotification('Ошибка регистрации сервис-воркера', 'error');
+                });
         }
     }
 }
