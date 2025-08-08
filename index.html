@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
     <meta name="theme-color" content="#0c0d2d" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -27,16 +27,7 @@
         <header class="app-header">
             <div class="logo">
                 <div class="logo-icon" aria-label="Иконка приложения">
-                    <svg viewBox="0 0 24 24" width="32" height="32" aria-hidden="true">
-                        <linearGradient id="logo-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stop-color="#36bff1" />
-                            <stop offset="100%" stop-color="#9f5ae3" />
-                        </linearGradient>
-                        <path
-                            d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4Z"
-                            fill="url(#logo-gradient)" />
-                        <path fill="white" d="M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z" />
-                    </svg>
+                    <img src="./icon-192.png" alt="Eternal Flow" />
                 </div>
                 <div>
                     <h1>Eternal Flow</h1>
@@ -44,7 +35,7 @@
                 </div>
             </div>
 
-            <div class="header-controls">
+            <div class="header-controls" id="headerControls">
                 <div class="search-box">
                     <svg viewBox="0 0 24 24" class="search-icon">
                         <linearGradient id="search-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -91,7 +82,7 @@
                         </linearGradient>
                         <path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" fill="url(#add-gradient)" />
                     </svg>
-                    Добавить
+                    <span class="button-text">Добавить</span>
                 </button>
                 
                 <button id="importBtn" class="action-btn" aria-label="Импорт событий">
@@ -102,7 +93,7 @@
                         </linearGradient>
                         <path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" fill="url(#import-gradient)" />
                     </svg>
-                    Импорт
+                    <span class="button-text">Импорт</span>
                 </button>
                 
                 <button id="exportBtn" class="action-btn" aria-label="Экспорт событий">
@@ -113,7 +104,7 @@
                         </linearGradient>
                         <path d="M9,16V10H5L12,3L19,10H15V16H9M5,20V18H19V20H5Z" fill="url(#export-gradient)" />
                     </svg>
-                    Экспорт
+                    <span class="button-text">Экспорт</span>
                 </button>
                 
                 <button id="clearBtn" class="action-btn danger" aria-label="Очистить все события">
@@ -125,7 +116,7 @@
                         <path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"
                             fill="url(#clear-gradient)" />
                     </svg>
-                    Очистить
+                    <span class="button-text">Очистить</span>
                 </button>
             </div>
 
@@ -194,7 +185,7 @@
 
             <div class="app-info" aria-label="Информация о приложении">
                 <p>Данные хранятся только на вашем устройстве - 100% конфиденциальность.</p>
-                <p>Eternal Flow <span class="app-version"></span> &copy; 2025.</p>
+                <p>Eternal Flow <span class="app-version"></span></p>
                 <p>
                     <a href="https://github.com/dituals758/EternalFlow" target="_blank" rel="noopener" class="github-link">
                         <svg viewBox="0 0 24 24" width="20" height="20">

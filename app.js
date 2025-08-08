@@ -1,7 +1,7 @@
 export class EternalFlowApp {
     constructor() {
         this.config = {
-            APP_VERSION: '2.2.2',
+            APP_VERSION: '1.0.0',
             DB_NAME: 'EternalFlowDB',
             DB_VERSION: 1,
             TIME_UNITS: [
@@ -24,24 +24,33 @@ export class EternalFlowApp {
         this.searchQuery = '';
         this.db = null;
         this.isLoading = true;
+        this.lastScrollPosition = 0;
 
         this.init();
     }
 
     async init() {
-        this.createParticles();
-        await this.initDB();
-        await this.loadSettings();
-        this.renderSkeletons();
-        await this.loadEvents();
-        this.setupEventListeners();
-        this.startTimers();
-        this.setCurrentDateTime();
-        this.setupServiceWorker();
-        this.setupInstallPrompt();
-        this.setAppVersion();
-        this.setupModal();
-        this.isLoading = false;
+        try {
+            this.createParticles();
+            await this.initDB();
+            await this.loadSettings();
+            this.renderSkeletons();
+            await this.loadEvents();
+            this.setupEventListeners();
+            this.startTimers();
+            this.setCurrentDateTime();
+            this.setupServiceWorker();
+            this.setupInstallPrompt();
+            this.setAppVersion();
+            this.setupModal();
+            this.setupScrollHide();
+            this.isLoading = false;
+        } catch (error) {
+            console.error('Initialization error:', error);
+            this.isLoading = false;
+            this.renderEvents();
+            this.showNotification('Ошибка инициализации приложения', 'error');
+        }
     }
 
     async initDB() {
@@ -355,6 +364,42 @@ export class EternalFlowApp {
         });
     }
 
+    setupScrollHide() {
+        const headerControls = document.getElementById('headerControls');
+        if (!headerControls) return;
+        
+        let lastScrollTop = 0;
+        let scrollTimeout = null;
+        
+        window.addEventListener('scroll', () => {
+            const currentScroll = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollingDown = currentScroll > lastScrollTop;
+            
+            // Показываем при скролле вверх или начало скролла
+            if (currentScroll > 50) {
+                headerControls.classList.remove('hidden');
+            }
+            
+            // Скрываем при скролле вниз
+            if (scrollingDown && currentScroll > 100) {
+                headerControls.classList.add('hidden');
+            } else {
+                headerControls.classList.remove('hidden');
+            }
+            
+            // Обновляем позицию
+            lastScrollTop = currentScroll;
+            
+            // Скрываем через 3 секунды бездействия
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+                if (currentScroll > 100) {
+                    headerControls.classList.add('hidden');
+                }
+            }, 3000);
+        });
+    }
+
     openEventModal() {
         const modal = document.getElementById('eventModal');
         const modalTitle = document.getElementById('modalTitle');
@@ -486,7 +531,7 @@ export class EternalFlowApp {
 
             saveBtn.innerHTML = `
                 <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
-                    <path fill="white" d="M21.7,7.3L16.7,2.3C16.5,2.1 16.3,2 16,2H4C2.9,2 2,2.9 2,4V20C2,21.1 2.9,22 4,22H20C21.1,22 22,21.1 22,20V8C22,7.7 21.9,7.5 21.7,7.3M7,20H4V17H7V20M11,20H8V17H11V20M11,14H8V11H11V14M15,20H12V17H15V20M20,20H16V16H14V14H16V11H14V9H16V6H14V4H16V7.6L20,11.6V20Z"/>
+                    <path fill="white" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"/>
                 </svg>
                 Сохранить изменения
             `;
@@ -677,7 +722,7 @@ export class EternalFlowApp {
             dateDiv.setAttribute('aria-label', 'Дата события');
             dateDiv.title = this.formatFullDate(new Date(event.date));
             dateDiv.innerHTML = `
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19,19H5V8H19M16,1V3H8V1H6V3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3H18V1M17,12H12V17H17V12Z" fill="#36bff1"/></svg>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" fill="#36bff1"/></svg>
                 ${this.formatDate(new Date(event.date))}
             `;
 
