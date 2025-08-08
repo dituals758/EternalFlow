@@ -1,7 +1,7 @@
 export class EternalFlowApp {
     constructor() {
         this.config = {
-            APP_VERSION: '2.0.0',
+            APP_VERSION: '2.0.1',
             DB_NAME: 'EternalFlowDB',
             DB_VERSION: 1,
             TIME_UNITS: [
@@ -12,9 +12,7 @@ export class EternalFlowApp {
                 { name: 'minutes', divisor: 60000, labels: ['минут', 'минуты', 'минута'] },
                 { name: 'seconds', divisor: 1000, labels: ['секунд', 'секунды', 'секунда'] }
             ],
-            MAX_EVENTS: 100,
-            THEMES: ['blue', 'purple', 'green', 'red'],
-            DEFAULT_THEME: 'blue'
+            MAX_EVENTS: 100
         };
         
         this.events = [];
@@ -25,14 +23,12 @@ export class EternalFlowApp {
         this.sort = 'date-asc';
         this.searchQuery = '';
         this.db = null;
-        this.theme = this.config.DEFAULT_THEME;
         
         this.init();
     }
 
     async init() {
         this.createParticles();
-        this.setupTheme();
         await this.initDB();
         await this.loadEvents();
         this.setupEventListeners();
@@ -145,7 +141,7 @@ export class EternalFlowApp {
             const transaction = this.db.transaction(['settings'], 'readonly');
             const store = transaction.objectStore('settings');
             
-            ['theme', 'filter', 'sort'].forEach(name => {
+            ['filter', 'sort'].forEach(name => {
                 const request = store.get(name);
                 request.onsuccess = (event) => {
                     if (event.target.result) {
@@ -181,15 +177,7 @@ export class EternalFlowApp {
     }
 
     applySettings() {
-        // Применить тему
-        document.documentElement.setAttribute('data-theme', this.theme);
-        
-        // Применить фильтры/сортировку
         this.renderEvents();
-        
-        // Обновить UI элементов управления
-        const themeSelect = document.getElementById('themeSelect');
-        if (themeSelect) themeSelect.value = this.theme;
         
         const filterSelect = document.getElementById('filterSelect');
         if (filterSelect) filterSelect.value = this.filter;
@@ -243,7 +231,9 @@ export class EternalFlowApp {
         const container = document.getElementById('particles');
         if (!container) return;
         
+        const colors = ['#b2ccf6', '#36bff1', '#9f5ae3', '#2059c2', '#122878'];
         const particleCount = 20;
+        
         for (let i = 0; i < particleCount; i++) {
             const particle = document.createElement('div');
             particle.classList.add('particle');
@@ -253,26 +243,21 @@ export class EternalFlowApp {
             const posY = Math.random() * 100;
             const duration = Math.random() * 10 + 10;
             const delay = Math.random() * 5;
-            const hue = Math.random() * 360;
             
             particle.style.cssText = `
                 width: ${size}px;
                 height: ${size}px;
                 left: ${posX}%;
                 top: ${posY}%;
-                background: hsla(${hue}, 80%, 70%, ${Math.random() * 0.2 + 0.05});
+                background: ${colors[Math.floor(Math.random() * colors.length)]};
+                opacity: ${Math.random() * 0.2 + 0.05};
                 animation-duration: ${duration}s;
                 animation-delay: ${delay}s;
+                border-radius: 50%;
             `;
             
             container.appendChild(particle);
         }
-    }
-
-    setupTheme() {
-        const savedTheme = localStorage.getItem('ef-theme') || this.config.DEFAULT_THEME;
-        this.theme = this.config.THEMES.includes(savedTheme) ? savedTheme : this.config.DEFAULT_THEME;
-        document.documentElement.setAttribute('data-theme', this.theme);
     }
 
     setCurrentDateTime() {
@@ -309,18 +294,6 @@ export class EternalFlowApp {
         if (importBtn) importBtn.addEventListener('click', () => this.importEvents());
         if (exportBtn) exportBtn.addEventListener('click', () => this.exportEvents());
         if (clearBtn) clearBtn.addEventListener('click', () => this.showClearConfirmation());
-        
-        // Theme selector
-        const themeSelect = document.getElementById('themeSelect');
-        if (themeSelect) {
-            themeSelect.value = this.theme;
-            themeSelect.addEventListener('change', (e) => {
-                this.theme = e.target.value;
-                document.documentElement.setAttribute('data-theme', this.theme);
-                localStorage.setItem('ef-theme', this.theme);
-                this.saveSetting('theme', this.theme);
-            });
-        }
         
         // Filter and sort
         const filterSelect = document.getElementById('filterSelect');
@@ -576,7 +549,7 @@ export class EternalFlowApp {
             emptyState.className = 'empty-state';
             emptyState.setAttribute('aria-label', 'Нет событий');
             emptyState.innerHTML = `
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="var(--accent)" d="M256,32C132.3,32,32,132.3,32,256s100.3,224,224,224s224-100.3,224-224S379.7,32,256,32z M410.5,297.5l-32.9,32.9l-16.5-16.5l32.9-32.9L410.5,297.5z M365.9,252.9l-32.9,32.9l-16.5-16.5l32.9-32.9L365.9,252.9z M321.3,208.3l-32.9,32.9l-16.5-16.5l32.9-32.9L321.3,208.3z M276.7,163.7l-32.9,32.9l-16.5-16.5l32.9-32.9L276.7,163.7z"/></svg>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#36bff1" d="M256,32C132.3,32,32,132.3,32,256s100.3,224,224,224s224-100.3,224-224S379.7,32,256,32z M410.5,297.5l-32.9,32.9l-16.5-16.5l32.9-32.9L410.5,297.5z M365.9,252.9l-32.9,32.9l-16.5-16.5l32.9-32.9L365.9,252.9z M321.3,208.3l-32.9,32.9l-16.5-16.5l32.9-32.9L321.3,208.3z M276.7,163.7l-32.9,32.9l-16.5-16.5l32.9-32.9L276.7,163.7z"/></svg>
                 <p>Нет событий</p>
                 <p>${this.searchQuery ? 'Попробуйте изменить поисковый запрос' : 'Добавьте события для отслеживания'}</p>
             `;
@@ -595,7 +568,7 @@ export class EternalFlowApp {
             const titleDiv = document.createElement('div');
             titleDiv.className = 'event-title';
             titleDiv.innerHTML = `
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14,12L10,8V11H2V13H10V16M20,18V6C20,4.89 19.1,4 18,4H6A2,2 0 0,0 4,6V18A2,2 0 0,0 6,20H18A2,2 0 0,0 20,18Z"/></svg>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14,12L10,8V11H2V13H10V16M20,18V6C20,4.89 19.1,4 18,4H6A2,2 0 0,0 4,6V18A2,2 0 0,0 6,20H18A2,2 0 0,0 20,18Z" fill="#b2ccf6"/></svg>
                 ${this.escapeHTML(event.title)}
             `;
             
@@ -603,7 +576,7 @@ export class EternalFlowApp {
             dateDiv.className = 'event-date';
             dateDiv.setAttribute('aria-label', 'Дата события');
             dateDiv.innerHTML = `
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19,19H5V8H19M16,1V3H8V1H6V3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3H18V1M17,12H12V17H17V12Z"/></svg>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19,19H5V8H19M16,1V3H8V1H6V3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3H18V1M17,12H12V17H17V12Z" fill="#36bff1"/></svg>
                 ${this.formatDate(new Date(event.date))}
             `;
             
@@ -622,7 +595,7 @@ export class EternalFlowApp {
             editBtn.setAttribute('aria-label', 'Редактировать событие');
             editBtn.innerHTML = `
                 <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z"/>
+                    <path d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z" fill="#36bff1"/>
                 </svg>
             `;
             editBtn.addEventListener('click', () => this.editEvent(event.id));
@@ -632,7 +605,7 @@ export class EternalFlowApp {
             deleteBtn.setAttribute('aria-label', 'Удалить событие');
             deleteBtn.innerHTML = `
                 <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/>
+                    <path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z" fill="#ff6b6b"/>
                 </svg>
             `;
             deleteBtn.addEventListener('click', () => this.showDeleteConfirmation(event.id));
@@ -845,13 +818,13 @@ export class EternalFlowApp {
         let icon = '';
         switch (type) {
             case 'success':
-                icon = '<svg viewBox="0 0 24 24"><path fill="var(--success)" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"/></svg>';
+                icon = '<svg viewBox="0 0 24 24"><path fill="#36f1b3" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"/></svg>';
                 break;
             case 'error':
-                icon = '<svg viewBox="0 0 24 24"><path fill="var(--danger)" d="M13,13H11V7H13M13,17H11V15H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/></svg>';
+                icon = '<svg viewBox="0 0 24 24"><path fill="#ff6b6b" d="M13,13H11V7H13M13,17H11V15H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/></svg>';
                 break;
             default:
-                icon = '<svg viewBox="0 0 24 24"><path fill="var(--primary)" d="M13,9H11V7H13M13,17H11V11H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/></svg>';
+                icon = '<svg viewBox="0 0 24 24"><path fill="#36bff1" d="M13,9H11V7H13M13,17H11V11H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/></svg>';
                 break;
         }
         
