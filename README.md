@@ -40,9 +40,12 @@
 - Manifest.json для PWA
 - Service Worker для оффлайн-работы
 
-## Быстрый старт
+## Cоздано с помощью ИИ
 
-1. Склонируйте репозиторий:
-   ```bash
-   git clone https://github.com/dituals758/EternalFlow.git
-   cd EternalFlow
+- Код приложения сгенерирован DeepSeek
+- Иконка приложения сгенерирована YandexART v.2.7:
+   ```promt
+   Minimalist app icon "Eternal Flow": Abstract infinity symbol (∞) merging with fluid hourglass silhouette.
+   Gradient using #b2ccf6 #36bff1 #9f5ae3 #2059c2 #122878, centered on dark #0c0d2d background.
+   Clean lines, no text, conveying time flow and data privacy.
+   Modern flat design with soft glow.
