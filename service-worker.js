@@ -1,4 +1,4 @@
-const CACHE_NAME = 'eternal-flow-v1';
+const CACHE_NAME = 'eternal-flow-v1.1';
 const PRECACHE_URLS = [
   '/',
   '/index.html',
@@ -42,7 +42,7 @@ self.addEventListener('fetch', event => {
 
         return fetch(event.request)
           .then(response => {
-            // не кешируем opaque/错误ные ответы
+          
             if (!response || response.status !== 200 || response.type !== 'basic') {
               return response;
             }
