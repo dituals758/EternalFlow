@@ -1,11 +1,11 @@
-const APP_VERSION = "";
+const APP_VERSION = "2.2.0";
 const CACHE_NAME = `EternalFlow-v${APP_VERSION}`;
 const PRECACHE_URLS = [
     './',
     './index.html',
     './styles.css',
     './app.js',
-    './manifest.json',
+    './manifest.webmanifest',
     './icon-192.png',
     './icon-512.png'
 ];
@@ -35,18 +35,15 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
     if (event.request.method !== 'GET') return;
     
-    // Network first strategy
     event.respondWith(
         fetch(event.request)
             .then(networkResponse => {
-                // Cache the response for future visits
                 const responseClone = networkResponse.clone();
                 caches.open(CACHE_NAME)
                     .then(cache => cache.put(event.request, responseClone));
                 return networkResponse;
             })
             .catch(() => {
-                // Fallback to cache
                 return caches.match(event.request)
                     .then(cachedResponse => cachedResponse || caches.match('./'));
             })
