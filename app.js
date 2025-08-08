@@ -1,8 +1,9 @@
 export class EternalFlowApp {
     constructor() {
         this.config = {
-            APP_VERSION: '1.6.1',
-            STORAGE_KEY: 'EternalFlowEventsData',
+            APP_VERSION: '2.0.0',
+            DB_NAME: 'EternalFlowDB',
+            DB_VERSION: 1,
             TIME_UNITS: [
                 { name: 'years', divisor: 31536000000, labels: ['лет', 'года', 'год'] },
                 { name: 'months', divisor: 2628000000, labels: ['месяцев', 'месяца', 'месяц'] },
@@ -11,23 +12,193 @@ export class EternalFlowApp {
                 { name: 'minutes', divisor: 60000, labels: ['минут', 'минуты', 'минута'] },
                 { name: 'seconds', divisor: 1000, labels: ['секунд', 'секунды', 'секунда'] }
             ],
-            MAX_FILE_SIZE: 2 * 1024 * 1024
+            MAX_EVENTS: 100,
+            THEMES: ['blue', 'purple', 'green', 'red'],
+            DEFAULT_THEME: 'blue'
         };
+        
         this.events = [];
         this.deferredPrompt = null;
         this.timerUpdateInterval = null;
+        this.editingEventId = null;
+        this.filter = 'all';
+        this.sort = 'date-asc';
+        this.searchQuery = '';
+        this.db = null;
+        this.theme = this.config.DEFAULT_THEME;
+        
         this.init();
     }
 
-    init() {
+    async init() {
         this.createParticles();
-        this.loadEvents();
+        this.setupTheme();
+        await this.initDB();
+        await this.loadEvents();
         this.setupEventListeners();
         this.startTimers();
         this.setCurrentDateTime();
         this.setupServiceWorker();
         this.setupInstallPrompt();
         this.setAppVersion();
+    }
+
+    async initDB() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(this.config.DB_NAME, this.config.DB_VERSION);
+            
+            request.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains('events')) {
+                    const store = db.createObjectStore('events', { keyPath: 'id' });
+                    store.createIndex('date', 'date', { unique: false });
+                }
+                
+                if (!db.objectStoreNames.contains('settings')) {
+                    db.createObjectStore('settings', { keyPath: 'name' });
+                }
+            };
+            
+            request.onsuccess = (event) => {
+                this.db = event.target.result;
+                resolve();
+            };
+            
+            request.onerror = (event) => {
+                console.error('Database error:', event.target.error);
+                reject(event.target.error);
+            };
+        });
+    }
+
+    async loadEvents() {
+        if (!this.db) return;
+        
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(['events'], 'readonly');
+            const store = transaction.objectStore('events');
+            const request = store.getAll();
+            
+            request.onsuccess = (event) => {
+                this.events = event.target.result || [];
+                this.renderEvents();
+                resolve();
+            };
+            
+            request.onerror = (event) => {
+                console.error('Error loading events:', event.target.error);
+                this.showNotification('Ошибка загрузки данных', 'error');
+                reject(event.target.error);
+            };
+        });
+    }
+
+    async saveEvent(event) {
+        if (!this.db) return;
+        
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(['events'], 'readwrite');
+            const store = transaction.objectStore('events');
+            
+            const request = event.id ? store.put(event) : store.add({
+                ...event,
+                id: Date.now().toString(),
+                createdAt: new Date().toISOString()
+            });
+            
+            request.onsuccess = () => {
+                resolve();
+            };
+            
+            request.onerror = (event) => {
+                console.error('Error saving event:', event.target.error);
+                this.showNotification('Ошибка сохранения', 'error');
+                reject(event.target.error);
+            };
+        });
+    }
+
+    async deleteEvent(id) {
+        if (!this.db) return;
+        
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(['events'], 'readwrite');
+            const store = transaction.objectStore('events');
+            const request = store.delete(id);
+            
+            request.onsuccess = () => {
+                resolve();
+            };
+            
+            request.onerror = (event) => {
+                console.error('Error deleting event:', event.target.error);
+                this.showNotification('Ошибка удаления', 'error');
+                reject(event.target.error);
+            };
+        });
+    }
+
+    async loadSettings() {
+        if (!this.db) return;
+        
+        return new Promise((resolve) => {
+            const transaction = this.db.transaction(['settings'], 'readonly');
+            const store = transaction.objectStore('settings');
+            
+            ['theme', 'filter', 'sort'].forEach(name => {
+                const request = store.get(name);
+                request.onsuccess = (event) => {
+                    if (event.target.result) {
+                        this[name] = event.target.result.value;
+                    }
+                };
+            });
+            
+            transaction.oncomplete = () => {
+                this.applySettings();
+                resolve();
+            };
+        });
+    }
+
+    async saveSetting(name, value) {
+        if (!this.db) return;
+        
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(['settings'], 'readwrite');
+            const store = transaction.objectStore('settings');
+            const request = store.put({ name, value });
+            
+            request.onsuccess = () => {
+                resolve();
+            };
+            
+            request.onerror = (event) => {
+                console.error(`Error saving setting ${name}:`, event.target.error);
+                reject(event.target.error);
+            };
+        });
+    }
+
+    applySettings() {
+        // Применить тему
+        document.documentElement.setAttribute('data-theme', this.theme);
+        
+        // Применить фильтры/сортировку
+        this.renderEvents();
+        
+        // Обновить UI элементов управления
+        const themeSelect = document.getElementById('themeSelect');
+        if (themeSelect) themeSelect.value = this.theme;
+        
+        const filterSelect = document.getElementById('filterSelect');
+        if (filterSelect) filterSelect.value = this.filter;
+        
+        const sortSelect = document.getElementById('sortSelect');
+        if (sortSelect) sortSelect.value = this.sort;
+        
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) searchInput.value = this.searchQuery;
     }
 
     setAppVersion() {
@@ -98,6 +269,12 @@ export class EternalFlowApp {
         }
     }
 
+    setupTheme() {
+        const savedTheme = localStorage.getItem('ef-theme') || this.config.DEFAULT_THEME;
+        this.theme = this.config.THEMES.includes(savedTheme) ? savedTheme : this.config.DEFAULT_THEME;
+        document.documentElement.setAttribute('data-theme', this.theme);
+    }
+
     setCurrentDateTime() {
         const now = new Date();
         const year = now.getFullYear();
@@ -112,55 +289,69 @@ export class EternalFlowApp {
         }
     }
 
-    loadEvents() {
-        try {
-            const stored = localStorage.getItem(this.config.STORAGE_KEY);
-            if (stored) {
-                const parsed = JSON.parse(stored);
-                if (Array.isArray(parsed)) {
-                    this.events = parsed.filter(e => 
-                        e.id && e.title && e.date && !isNaN(new Date(e.date).getTime())
-                    );
-                }
-            }
-        } catch (err) {
-            console.error('Ошибка загрузки данных', err);
-            this.showNotification('Ошибка загрузки данных', 'error');
-            this.events = [];
-        }
-        this.renderEvents();
-    }
-
-    saveEvents() {
-        try {
-            localStorage.setItem(this.config.STORAGE_KEY, JSON.stringify(this.events));
-        } catch (err) {
-            console.error('Ошибка сохранения событий', err);
-            this.showNotification('Ошибка сохранения данных', 'error');
-        }
-    }
-
     setupEventListeners() {
         const saveBtn = document.getElementById('saveEventBtn');
         if (saveBtn) {
-            saveBtn.addEventListener('click', () => this.saveEvent());
+            saveBtn.addEventListener('click', () => this.saveEventForm());
         }
         
         const titleInput = document.getElementById('eventTitle');
         if (titleInput) {
             titleInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') this.saveEvent();
+                if (e.key === 'Enter') this.saveEventForm();
             });
         }
         
         const importBtn = document.getElementById('importBtn');
         const exportBtn = document.getElementById('exportBtn');
+        const clearBtn = document.getElementById('clearBtn');
         
         if (importBtn) importBtn.addEventListener('click', () => this.importEvents());
         if (exportBtn) exportBtn.addEventListener('click', () => this.exportEvents());
+        if (clearBtn) clearBtn.addEventListener('click', () => this.showClearConfirmation());
+        
+        // Theme selector
+        const themeSelect = document.getElementById('themeSelect');
+        if (themeSelect) {
+            themeSelect.value = this.theme;
+            themeSelect.addEventListener('change', (e) => {
+                this.theme = e.target.value;
+                document.documentElement.setAttribute('data-theme', this.theme);
+                localStorage.setItem('ef-theme', this.theme);
+                this.saveSetting('theme', this.theme);
+            });
+        }
+        
+        // Filter and sort
+        const filterSelect = document.getElementById('filterSelect');
+        if (filterSelect) {
+            filterSelect.addEventListener('change', (e) => {
+                this.filter = e.target.value;
+                this.saveSetting('filter', this.filter);
+                this.renderEvents();
+            });
+        }
+        
+        const sortSelect = document.getElementById('sortSelect');
+        if (sortSelect) {
+            sortSelect.addEventListener('change', (e) => {
+                this.sort = e.target.value;
+                this.saveSetting('sort', this.sort);
+                this.renderEvents();
+            });
+        }
+        
+        // Search
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                this.searchQuery = e.target.value.toLowerCase();
+                this.renderEvents();
+            });
+        }
     }
 
-    saveEvent() {
+    async saveEventForm() {
         const titleInput = document.getElementById('eventTitle');
         const dateInput = document.getElementById('eventDate');
         
@@ -185,26 +376,78 @@ export class EternalFlowApp {
             return;
         }
         
-        this.addEvent({
-            id: Date.now().toString(),
-            title,
-            date: targetDate.toISOString()
-        });
+        try {
+            if (this.editingEventId) {
+                // Update existing event
+                const event = this.events.find(e => e.id === this.editingEventId);
+                if (event) {
+                    event.title = title;
+                    event.date = targetDate.toISOString();
+                    await this.saveEvent(event);
+                    this.showNotification('Событие обновлено', 'success');
+                }
+                this.editingEventId = null;
+            } else {
+                // Create new event
+                await this.saveEvent({
+                    title,
+                    date: targetDate.toISOString()
+                });
+                this.showNotification('Событие добавлено', 'success');
+            }
+            
+            await this.loadEvents();
+            
+            if (titleInput) titleInput.value = '';
+            this.setCurrentDateTime();
+            if (titleInput) titleInput.focus();
+            
+            // Reset button text
+            const saveBtn = document.getElementById('saveEventBtn');
+            if (saveBtn) {
+                saveBtn.innerHTML = `
+                    <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+                        <path fill="white" d="M17,3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V7L17,3M19,19H5V5H16.17L19,7.83V19M12,12A4,4 0 0,0 8,16A4,4 0 0,0 12,20A4,4 0 0,0 16,16A4,4 0 0,0 12,12Z"/>
+                    </svg>
+                    Добавить событие
+                `;
+            }
+        } catch (error) {
+            console.error('Error saving event:', error);
+            this.showNotification('Ошибка сохранения', 'error');
+        }
+    }
+
+    editEvent(eventId) {
+        const event = this.events.find(e => e.id === eventId);
+        if (!event) return;
         
-        if (titleInput) titleInput.value = '';
-        this.setCurrentDateTime();
-        if (titleInput) titleInput.focus();
-        this.showNotification('Событие добавлено', 'success');
-    }
-
-    addEvent(event) {
-        this.events.push(event);
-        this.saveEvents();
-        this.renderEvents();
-    }
-
-    deleteEvent(eventId) {
-        this.showDeleteConfirmation(eventId);
+        const titleInput = document.getElementById('eventTitle');
+        const dateInput = document.getElementById('eventDate');
+        const saveBtn = document.getElementById('saveEventBtn');
+        
+        if (titleInput && dateInput && saveBtn) {
+            this.editingEventId = eventId;
+            titleInput.value = event.title;
+            
+            const date = new Date(event.date);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            dateInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+            
+            saveBtn.innerHTML = `
+                <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+                    <path fill="white" d="M21.7,7.3L16.7,2.3C16.5,2.1 16.3,2 16,2H4C2.9,2 2,2.9 2,4V20C2,21.1 2.9,22 4,22H20C21.1,22 22,21.1 22,20V8C22,7.7 21.9,7.5 21.7,7.3M7,20H4V17H7V20M11,20H8V17H11V20M11,14H8V11H11V14M15,20H12V17H15V20M20,20H16V16H14V14H16V11H14V9H16V6H14V4H16V7.6L20,11.6V20Z"/>
+                </svg>
+                Сохранить изменения
+            `;
+            
+            titleInput.focus();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
     }
 
     showDeleteConfirmation(eventId) {
@@ -222,15 +465,64 @@ export class EternalFlowApp {
         
         document.body.appendChild(modal);
         
-        document.getElementById('confirmDelete').addEventListener('click', () => {
-            this.events = this.events.filter(e => e.id !== eventId);
-            this.saveEvents();
-            this.renderEvents();
-            this.showNotification('Событие удалено', 'success');
-            modal.remove();
+        document.getElementById('confirmDelete').addEventListener('click', async () => {
+            try {
+                await this.deleteEvent(eventId);
+                await this.loadEvents();
+                this.showNotification('Событие удалено', 'success');
+            } catch (error) {
+                console.error('Error deleting event:', error);
+                this.showNotification('Ошибка удаления', 'error');
+            } finally {
+                modal.remove();
+            }
         });
         
         document.getElementById('cancelDelete').addEventListener('click', () => {
+            modal.remove();
+        });
+    }
+
+    showClearConfirmation() {
+        if (this.events.length === 0) {
+            this.showNotification('Нет событий для очистки', 'info');
+            return;
+        }
+        
+        const modal = document.createElement('div');
+        modal.className = 'confirmation-modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <p>Вы уверены, что хотите удалить ВСЕ события? Это действие нельзя отменить.</p>
+                <div class="modal-buttons">
+                    <button id="confirmClear" class="btn danger">Удалить всё</button>
+                    <button id="cancelClear" class="btn">Отмена</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        document.getElementById('confirmClear').addEventListener('click', async () => {
+            try {
+                const transaction = this.db.transaction(['events'], 'readwrite');
+                const store = transaction.objectStore('events');
+                store.clear();
+                
+                transaction.oncomplete = async () => {
+                    this.events = [];
+                    this.renderEvents();
+                    this.showNotification('Все события удалены', 'success');
+                };
+            } catch (error) {
+                console.error('Error clearing events:', error);
+                this.showNotification('Ошибка очистки', 'error');
+            } finally {
+                modal.remove();
+            }
+        });
+        
+        document.getElementById('cancelClear').addEventListener('click', () => {
             modal.remove();
         });
     }
@@ -239,56 +531,121 @@ export class EternalFlowApp {
         const container = document.getElementById('eventsContainer');
         if (!container) return;
         
-        container.innerHTML = '';
+        // Clear container
+        while (container.firstChild) {
+            container.removeChild(container.firstChild);
+        }
         
-        if (this.events.length === 0) {
-            container.innerHTML = `
-                <div class="empty-state" aria-label="Нет событий">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="var(--accent)" d="M19,19H5V8H19M16,1V3H8V1H6V3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3H18V1M17,12H12V17H17V12Z"/></svg>
-                    <p>Нет событий</p>
-                    <p>Добавьте события для отслеживания</p>
-                </div>
+        // Filter events
+        let filteredEvents = [...this.events];
+        const now = new Date();
+        
+        if (this.filter === 'upcoming') {
+            filteredEvents = filteredEvents.filter(e => new Date(e.date) > now);
+        } else if (this.filter === 'past') {
+            filteredEvents = filteredEvents.filter(e => new Date(e.date) <= now);
+        }
+        
+        // Search
+        if (this.searchQuery) {
+            filteredEvents = filteredEvents.filter(e => 
+                e.title.toLowerCase().includes(this.searchQuery)
+            );
+        }
+        
+        // Sort events
+        filteredEvents.sort((a, b) => {
+            const dateA = new Date(a.date);
+            const dateB = new Date(b.date);
+            
+            switch (this.sort) {
+                case 'date-asc': return dateA - dateB;
+                case 'date-desc': return dateB - dateA;
+                case 'title-asc': return a.title.localeCompare(b.title);
+                case 'title-desc': return b.title.localeCompare(a.title);
+                case 'added-asc': 
+                    return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
+                case 'added-desc': 
+                    return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+                default: return dateA - dateB;
+            }
+        });
+        
+        if (filteredEvents.length === 0) {
+            const emptyState = document.createElement('div');
+            emptyState.className = 'empty-state';
+            emptyState.setAttribute('aria-label', 'Нет событий');
+            emptyState.innerHTML = `
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="var(--accent)" d="M256,32C132.3,32,32,132.3,32,256s100.3,224,224,224s224-100.3,224-224S379.7,32,256,32z M410.5,297.5l-32.9,32.9l-16.5-16.5l32.9-32.9L410.5,297.5z M365.9,252.9l-32.9,32.9l-16.5-16.5l32.9-32.9L365.9,252.9z M321.3,208.3l-32.9,32.9l-16.5-16.5l32.9-32.9L321.3,208.3z M276.7,163.7l-32.9,32.9l-16.5-16.5l32.9-32.9L276.7,163.7z"/></svg>
+                <p>Нет событий</p>
+                <p>${this.searchQuery ? 'Попробуйте изменить поисковый запрос' : 'Добавьте события для отслеживания'}</p>
             `;
+            container.appendChild(emptyState);
             return;
         }
         
-        const sortedEvents = [...this.events].sort((a, b) => 
-            new Date(a.date) - new Date(b.date)
-        );
-        
-        sortedEvents.forEach(event => {
+        filteredEvents.forEach(event => {
             const card = document.createElement('div');
             card.className = 'event-card';
-            card.innerHTML = `
-                <div class="event-header">
-                    <div class="event-title">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14,12L10,8V11H2V13H10V16M20,18V6C20,4.89 19.1,4 18,4H6A2,2 0 0,0 4,6V18A2,2 0 0,0 6,20H18A2,2 0 0,0 20,18Z"/></svg>
-                        ${this.escapeHTML(event.title)}
-                    </div>
-                    <div class="event-date" aria-label="Дата события">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19,19H5V8H19M16,1V3H8V1H6V3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3H18V1M17,12H12V17H17V12Z"/></svg>
-                        ${this.formatDate(new Date(event.date))}
-                    </div>
-                </div>
-                <div class="time-grid" id="timer-${event.id}">
-                    <!-- Таймер будет обновлен отдельно -->
-                </div>
-                <button class="delete-btn" data-id="${event.id}" aria-label="Удалить событие">
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/>
-                    </svg>
-                </button>
+            card.dataset.id = event.id;
+            
+            const header = document.createElement('div');
+            header.className = 'event-header';
+            
+            const titleDiv = document.createElement('div');
+            titleDiv.className = 'event-title';
+            titleDiv.innerHTML = `
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14,12L10,8V11H2V13H10V16M20,18V6C20,4.89 19.1,4 18,4H6A2,2 0 0,0 4,6V18A2,2 0 0,0 6,20H18A2,2 0 0,0 20,18Z"/></svg>
+                ${this.escapeHTML(event.title)}
             `;
             
-            container.appendChild(card);
+            const dateDiv = document.createElement('div');
+            dateDiv.className = 'event-date';
+            dateDiv.setAttribute('aria-label', 'Дата события');
+            dateDiv.innerHTML = `
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19,19H5V8H19M16,1V3H8V1H6V3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3H18V1M17,12H12V17H17V12Z"/></svg>
+                ${this.formatDate(new Date(event.date))}
+            `;
             
-            const delBtn = card.querySelector('.delete-btn');
-            if (delBtn) {
-                delBtn.addEventListener('click', () => {
-                    const eventId = delBtn.dataset.id;
-                    this.deleteEvent(eventId);
-                });
-            }
+            header.appendChild(titleDiv);
+            header.appendChild(dateDiv);
+            
+            const timerContainer = document.createElement('div');
+            timerContainer.className = 'time-grid';
+            timerContainer.id = `timer-${event.id}`;
+            
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'event-actions';
+            
+            const editBtn = document.createElement('button');
+            editBtn.className = 'edit-btn';
+            editBtn.setAttribute('aria-label', 'Редактировать событие');
+            editBtn.innerHTML = `
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z"/>
+                </svg>
+            `;
+            editBtn.addEventListener('click', () => this.editEvent(event.id));
+            
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.setAttribute('aria-label', 'Удалить событие');
+            deleteBtn.innerHTML = `
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/>
+                </svg>
+            `;
+            deleteBtn.addEventListener('click', () => this.showDeleteConfirmation(event.id));
+            
+            actionsDiv.appendChild(editBtn);
+            actionsDiv.appendChild(deleteBtn);
+            
+            card.appendChild(header);
+            card.appendChild(timerContainer);
+            card.appendChild(actionsDiv);
+            
+            container.appendChild(card);
+            this.updateTimer(event.id);
         });
     }
 
@@ -297,11 +654,13 @@ export class EternalFlowApp {
             clearInterval(this.timerUpdateInterval);
         }
         
-        this.updateAllTimers();
-        
-        this.timerUpdateInterval = setInterval(() => {
+        // Use requestIdleCallback for better performance
+        const updateTimers = () => {
             this.updateAllTimers();
-        }, 1000);
+            this.timerUpdateInterval = setTimeout(updateTimers, 1000);
+        };
+        
+        updateTimers();
     }
 
     updateAllTimers() {
@@ -333,14 +692,15 @@ export class EternalFlowApp {
         }
         
         let hasNonZero = false;
-        let timerHTML = '';
+        const timerFrag = document.createDocumentFragment();
         
         if (isPast) {
-            timerHTML += `
-                <div class="time-unit" style="grid-column: 1 / -1; text-align: center; background: rgba(255, 107, 107, 0.1); border: 1px solid rgba(255, 107, 107, 0.3);">
-                    <div class="time-value" style="background: linear-gradient(135deg, var(--danger), var(--warning));">Прошло:</div>
-                </div>
+            const unitDiv = document.createElement('div');
+            unitDiv.className = 'time-unit past-indicator';
+            unitDiv.innerHTML = `
+                <div class="time-value">Прошло:</div>
             `;
+            timerFrag.appendChild(unitDiv);
         }
         
         for (const unit of this.config.TIME_UNITS) {
@@ -348,16 +708,23 @@ export class EternalFlowApp {
             if (value > 0 || hasNonZero) {
                 hasNonZero = true;
                 const label = this.getCorrectLabel(value, unit.labels);
-                timerHTML += `
-                    <div class="time-unit" aria-label="${value} ${label}">
-                        <div class="time-value">${value}</div>
-                        <div class="time-label">${label}</div>
-                    </div>
+                
+                const unitDiv = document.createElement('div');
+                unitDiv.className = 'time-unit';
+                unitDiv.setAttribute('aria-label', `${value} ${label}`);
+                unitDiv.innerHTML = `
+                    <div class="time-value">${value}</div>
+                    <div class="time-label">${label}</div>
                 `;
+                timerFrag.appendChild(unitDiv);
             }
         }
         
-        container.innerHTML = timerHTML;
+        // Clear and update
+        while (container.firstChild) {
+            container.removeChild(container.firstChild);
+        }
+        container.appendChild(timerFrag);
     }
 
     getCorrectLabel(value, labels) {
@@ -378,18 +745,24 @@ export class EternalFlowApp {
         });
     }
 
-    exportEvents() {
+    async exportEvents() {
         try {
             if (this.events.length === 0) {
                 this.showNotification('Нет событий для экспорта', 'info');
                 return;
             }
             
-            const dataStr = JSON.stringify(this.events, null, 2);
+            const data = {
+                version: this.config.APP_VERSION,
+                timestamp: new Date().toISOString(),
+                events: this.events
+            };
+            
+            const dataStr = JSON.stringify(data, null, 2);
             const blob = new Blob([dataStr], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             
-            const exportFileDefaultName = `ВечныйПоток_${new Date().toISOString().slice(0, 10)}.json`;
+            const exportFileDefaultName = `EternalFlow_${new Date().toISOString().slice(0, 10)}.json`;
             
             const link = document.createElement('a');
             link.href = url;
@@ -411,55 +784,53 @@ export class EternalFlowApp {
         }
     }
 
-    importEvents() {
+    async importEvents() {
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = '.json';
         input.style.display = 'none';
         
-        input.onchange = (e) => {
+        input.onchange = async (e) => {
             const file = e.target.files[0];
             if (!file) return;
             
-            if (file.size > this.config.MAX_FILE_SIZE) {
-                this.showNotification('Файл слишком большой (макс. 2MB)', 'error');
-                return;
-            }
-            
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                try {
-                    const events = JSON.parse(event.target.result);
-                    if (!Array.isArray(events)) throw new Error('Неверный формат');
-                    
-                    const validEvents = events.filter(ev =>
-                        ev.id && typeof ev.id === 'string' &&
-                        ev.title && typeof ev.title === 'string' &&
-                        ev.title.length <= 50 &&
-                        ev.date && !isNaN(new Date(ev.date).getTime())
-                    );
-                    
-                    if (validEvents.length === 0) {
-                        this.showNotification('Нет допустимых событий в файле', 'error');
-                        return;
-                    }
-                    
-                    this.events = validEvents;
-                    this.saveEvents();
-                    this.renderEvents();
-                    this.showNotification(`Импортировано событий: ${validEvents.length}`, 'success');
-                    
-                } catch (err) {
-                    console.error('Ошибка импорта:', err);
-                    this.showNotification('Неверный формат файла', 'error');
+            try {
+                const reader = new FileReader();
+                const fileContent = await new Promise((resolve, reject) => {
+                    reader.onload = (event) => resolve(event.target.result);
+                    reader.onerror = () => reject(new Error('Ошибка чтения файла'));
+                    reader.readAsText(file);
+                });
+                
+                const data = JSON.parse(fileContent);
+                if (!data.events || !Array.isArray(data.events)) {
+                    throw new Error('Неверный формат файла');
                 }
-            };
-            
-            reader.onerror = () => {
-                this.showNotification('Ошибка чтения файла', 'error');
-            };
-            
-            reader.readAsText(file);
+                
+                const validEvents = data.events.filter(ev =>
+                    ev.id && typeof ev.id === 'string' &&
+                    ev.title && typeof ev.title === 'string' &&
+                    ev.title.length <= 50 &&
+                    ev.date && !isNaN(new Date(ev.date).getTime())
+                );
+                
+                if (validEvents.length === 0) {
+                    this.showNotification('Нет допустимых событий в файле', 'error');
+                    return;
+                }
+                
+                // Save all valid events
+                for (const event of validEvents) {
+                    await this.saveEvent(event);
+                }
+                
+                await this.loadEvents();
+                this.showNotification(`Импортировано событий: ${validEvents.length}`, 'success');
+                
+            } catch (err) {
+                console.error('Ошибка импорта:', err);
+                this.showNotification('Неверный формат файла', 'error');
+            }
         };
         
         document.body.appendChild(input);
@@ -508,6 +879,14 @@ export class EternalFlowApp {
             navigator.serviceWorker.register('./service-worker.js')
                 .then(registration => {
                     console.log('Service Worker зарегистрирован:', registration);
+                    
+                    // Check for updates
+                    registration.update();
+                    
+                    // Listen for new SW
+                    navigator.serviceWorker.addEventListener('controllerchange', () => {
+                        window.location.reload();
+                    });
                 })
                 .catch(err => {
                     console.error('Ошибка регистрации Service Worker:', err);

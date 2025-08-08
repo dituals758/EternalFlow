@@ -7,6 +7,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>Eternal Flow - Мастер отслеживания времени</title>
+    <link rel="icon" href="./icon-48.png">
     <link rel="apple-touch-icon" href="./icon-192.png">
     <link rel="manifest" href="./manifest.json" />
     <link rel="stylesheet" href="./styles.css" />
@@ -70,14 +71,66 @@
                 </button>
             </div>
 
-            <div class="import-export" aria-label="Импорт и экспорт данных">
+            <div class="controls">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Поиск событий..." />
+                </div>
+                
+                <div class="filters-sort">
+                    <div class="form-group">
+                        <label for="filterSelect" class="form-label">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14,12V19.88C14.04,20.18 13.94,20.5 13.71,20.71C13.32,21.1 12.69,21.1 12.3,20.71L10.29,18.7C10.06,18.47 9.96,18.16 10,17.87V12H9.97L4.21,4.62C3.87,4.19 3.95,3.56 4.38,3.22C4.57,3.08 4.78,3 5,3V3H19V3C19.22,3 19.43,3.08 19.62,3.22C20.05,3.56 20.13,4.19 19.79,4.62L14.03,12H14Z"/></svg>
+                            Фильтр
+                        </label>
+                        <select id="filterSelect" class="form-input">
+                            <option value="all">Все события</option>
+                            <option value="upcoming">Предстоящие</option>
+                            <option value="past">Прошедшие</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="sortSelect" class="form-label">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3,18H9V16H3V18M3,6V8H21V6H3M3,13H15V11H3V13Z"/></svg>
+                            Сортировка
+                        </label>
+                        <select id="sortSelect" class="form-input">
+                            <option value="date-asc">По дате (сначала ближайшие)</option>
+                            <option value="date-desc">По дате (сначала дальние)</option>
+                            <option value="title-asc">По названию (А-Я)</option>
+                            <option value="title-desc">По названию (Я-А)</option>
+                            <option value="added-asc">По дате добавления (старые)</option>
+                            <option value="added-desc">По дате добавления (новые)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="themeSelect" class="form-label">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12,16C14.76,16 17,13.76 17,11C17,8.24 14.76,6 12,6C9.24,6 7,8.24 7,11C7,13.76 9.24,16 12,16M12,8C13.66,8 15,9.34 15,11C15,12.66 13.66,14 12,14C10.34,14 9,12.66 9,11C9,9.34 10.34,8 12,8M12,18C7.58,18 4,15.31 4,11C4,6.69 7.58,4 12,4C16.42,4 20,6.69 20,11C20,15.31 16.42,18 12,18M12,2C6.48,2 2,6.48 2,12C2,17.52 6.48,22 12,22C17.52,22 22,17.52 22,12C22,6.48 17.52,2 12,2Z"/></svg>
+                            Тема
+                        </label>
+                        <select id="themeSelect" class="form-input">
+                            <option value="blue">Синяя</option>
+                            <option value="purple">Фиолетовая</option>
+                            <option value="green">Зеленая</option>
+                            <option value="red">Красная</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="import-export">
                 <button id="importBtn" class="action-btn">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z"/></svg>
-                    Импортировать данные
+                    Импорт
                 </button>
                 <button id="exportBtn" class="action-btn">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z"/></svg>
-                    Экспортировать данные
+                    Экспорт
+                </button>
+                <button id="clearBtn" class="action-btn danger">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"/></svg>
+                    Очистить
                 </button>
             </div>
 
@@ -86,7 +139,7 @@
             </div>
 
             <div class="app-info" aria-label="Информация о приложении">
-                <p>Данные хранятся только на вашем устройстве - 100% конфиденциальность. Разработано с помощью gpt-5-nano. Дизайн иконки shedevrum.ai. Eternal Flow <span class="app-version">v0.0</span> &copy; 2025. <a href="https://github.com/dituals758/EternalFlow" class="github-link" target="_blank" rel="noopener">GitHub</a></p>
+                <p>Данные хранятся только на вашем устройстве - 100% конфиденциальность. Eternal Flow <span class="app-version">v0.0</span> &copy; 2025. <a href="https://github.com/dituals758/EternalFlow" class="github-link" target="_blank" rel="noopener">GitHub</a></p>
             </div>
         </main>
     </div>
