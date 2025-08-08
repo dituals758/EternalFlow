@@ -1,8 +1,8 @@
 export class EternalFlowApp {
     constructor() {
         this.config = {
-            APP_VERSION: '1.6',
-            STORAGE_KEY: 'liuguangForeverEvents',
+            APP_VERSION: '1.6.1',
+            STORAGE_KEY: 'EternalFlowEventsData',
             TIME_UNITS: [
                 { name: 'years', divisor: 31536000000, labels: ['лет', 'года', 'год'] },
                 { name: 'months', divisor: 2628000000, labels: ['месяцев', 'месяца', 'месяц'] },
