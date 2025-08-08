@@ -1,3 +1,64 @@
+/* Добавлены новые стили */
+a, .github-link {
+    color: var(--accent);
+    text-decoration: none;
+    transition: all var(--transition);
+    position: relative;
+}
+
+a:hover, .github-link:hover {
+    color: var(--primary);
+    text-decoration: underline;
+}
+
+.confirmation-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    backdrop-filter: blur(10px);
+}
+
+.modal-content {
+    background: var(--card-bg);
+    padding: 30px;
+    border-radius: 26px;
+    max-width: 90%;
+    width: 400px;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(149, 117, 205, 0.5);
+}
+
+.modal-content p {
+    font-size: 20px;
+    margin-bottom: 30px;
+    line-height: 1.5;
+}
+
+.modal-buttons {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+}
+
+.modal-buttons .btn {
+    flex: 1;
+    padding: 16px;
+    font-size: 18px;
+}
+
+.btn.danger {
+    background: linear-gradient(135deg, var(--danger), #d14545);
+}
+
+/* Обновленные стили */
 :root {
     --primary: #36bff1;
     --secondary: #9f5ae3;
@@ -524,6 +585,9 @@ body {
         width: 44px;
         height: 44px;
     }
+    .modal-buttons {
+        flex-direction: column;
+    }
 }
 @media (max-width: 480px) {
     .time-grid {
@@ -543,6 +607,9 @@ body {
     .dynamic-island {
         width: 140px;
         height: 38px;
+    }
+    .modal-content {
+        padding: 20px 15px;
     }
 }
 

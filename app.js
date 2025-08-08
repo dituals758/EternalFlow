@@ -1,6 +1,7 @@
 export class EternalFlowApp {
     constructor() {
         this.config = {
+            APP_VERSION: '1.6',
             STORAGE_KEY: 'liuguangForeverEvents',
             TIME_UNITS: [
                 { name: 'years', divisor: 31536000000, labels: ['лет', 'года', 'год'] },
@@ -26,6 +27,14 @@ export class EternalFlowApp {
         this.setCurrentDateTime();
         this.setupServiceWorker();
         this.setupInstallPrompt();
+        this.setAppVersion();
+    }
+
+    setAppVersion() {
+        const versionElements = document.querySelectorAll('.app-version');
+        versionElements.forEach(el => {
+            el.textContent = `v${this.config.APP_VERSION}`;
+        });
     }
 
     setupInstallPrompt() {
@@ -195,10 +204,35 @@ export class EternalFlowApp {
     }
 
     deleteEvent(eventId) {
-        this.events = this.events.filter(e => e.id !== eventId);
-        this.saveEvents();
-        this.renderEvents();
-        this.showNotification('Событие удалено', 'success');
+        this.showDeleteConfirmation(eventId);
+    }
+
+    showDeleteConfirmation(eventId) {
+        const modal = document.createElement('div');
+        modal.className = 'confirmation-modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <p>Вы уверены, что хотите удалить это событие?</p>
+                <div class="modal-buttons">
+                    <button id="confirmDelete" class="btn danger">Удалить</button>
+                    <button id="cancelDelete" class="btn">Отмена</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        document.getElementById('confirmDelete').addEventListener('click', () => {
+            this.events = this.events.filter(e => e.id !== eventId);
+            this.saveEvents();
+            this.renderEvents();
+            this.showNotification('Событие удалено', 'success');
+            modal.remove();
+        });
+        
+        document.getElementById('cancelDelete').addEventListener('click', () => {
+            modal.remove();
+        });
     }
 
     renderEvents() {
@@ -259,35 +293,32 @@ export class EternalFlowApp {
     }
 
     startTimers() {
-        // Остановить предыдущий интервал, если существует
         if (this.timerUpdateInterval) {
             clearInterval(this.timerUpdateInterval);
         }
         
-        // Обновляем все таймеры сразу
         this.updateAllTimers();
         
-        // Затем обновляем каждую секунду
         this.timerUpdateInterval = setInterval(() => {
             this.updateAllTimers();
         }, 1000);
     }
 
     updateAllTimers() {
+        const now = Date.now();
         this.events.forEach(event => {
-            this.updateTimer(event.id);
+            this.updateTimer(event.id, now);
         });
     }
 
-    updateTimer(eventId) {
+    updateTimer(eventId, now = Date.now()) {
         const container = document.getElementById(`timer-${eventId}`);
         if (!container) return;
         
         const event = this.events.find(e => e.id === eventId);
         if (!event) return;
         
-        const now = new Date();
-        const targetDate = new Date(event.date);
+        const targetDate = new Date(event.date).getTime();
         const diff = targetDate - now;
         const isPast = diff < 0;
         const absDiff = Math.abs(diff);
@@ -456,7 +487,6 @@ export class EternalFlowApp {
         notification.innerHTML = `${icon} ${message}`;
         notification.className = `notification ${type} show`;
         
-        // Очищаем предыдущий таймаут
         if (notification.timeoutId) {
             clearTimeout(notification.timeoutId);
         }
