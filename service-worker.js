@@ -1,4 +1,4 @@
-const CACHE_NAME = 'eternal-flow-v1.2';
+const CACHE_NAME = 'eternal-flow-v1.3';
 const PRECACHE_URLS = [
   '/',
   '/index.html',
