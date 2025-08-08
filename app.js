@@ -1,7 +1,7 @@
 export class EternalFlowApp {
     constructor() {
         this.config = {
-            APP_VERSION: '2.2.0',
+            APP_VERSION: '2.2.2',
             DB_NAME: 'EternalFlowDB',
             DB_VERSION: 1,
             TIME_UNITS: [
@@ -23,6 +23,7 @@ export class EternalFlowApp {
         this.sort = 'date-asc';
         this.searchQuery = '';
         this.db = null;
+        this.isLoading = true;
 
         this.init();
     }
@@ -30,6 +31,8 @@ export class EternalFlowApp {
     async init() {
         this.createParticles();
         await this.initDB();
+        await this.loadSettings();
+        this.renderSkeletons();
         await this.loadEvents();
         this.setupEventListeners();
         this.startTimers();
@@ -38,6 +41,7 @@ export class EternalFlowApp {
         this.setupInstallPrompt();
         this.setAppVersion();
         this.setupModal();
+        this.isLoading = false;
     }
 
     async initDB() {
@@ -89,6 +93,19 @@ export class EternalFlowApp {
                 reject(event.target.error);
             };
         });
+    }
+
+    renderSkeletons() {
+        const container = document.getElementById('eventsContainer');
+        if (!container) return;
+        
+        container.innerHTML = '';
+        
+        for (let i = 0; i < 3; i++) {
+            const skeletonCard = document.createElement('div');
+            skeletonCard.className = 'skeleton skeleton-card';
+            container.appendChild(skeletonCard);
+        }
     }
 
     async saveEvent(event) {
@@ -293,10 +310,12 @@ export class EternalFlowApp {
         const importBtn = document.getElementById('importBtn');
         const exportBtn = document.getElementById('exportBtn');
         const clearBtn = document.getElementById('clearBtn');
+        const openBtn = document.getElementById('openEventFormBtn');
 
         if (importBtn) importBtn.addEventListener('click', () => this.importEvents());
         if (exportBtn) exportBtn.addEventListener('click', () => this.exportEvents());
         if (clearBtn) clearBtn.addEventListener('click', () => this.showClearConfirmation());
+        if (openBtn) openBtn.addEventListener('click', () => this.openEventModal());
 
         const filterSelect = document.getElementById('filterSelect');
         if (filterSelect) {
@@ -325,29 +344,41 @@ export class EternalFlowApp {
         }
 
         document.addEventListener('keydown', (e) => {
-            const modal = document.getElementById('eventModal');
-            if (e.key === 'Escape' && modal.style.display !== 'none') {
-                modal.style.display = 'none';
-                this.editingEventId = null;
-                this.resetForm();
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('eventModal');
+                if (modal.classList.contains('show')) {
+                    modal.classList.remove('show');
+                    this.editingEventId = null;
+                    this.resetForm();
+                }
             }
         });
     }
 
-    setupModal() {
-        const openBtn = document.getElementById('openEventFormBtn');
-        const closeBtn = document.getElementById('closeEventModal');
+    openEventModal() {
         const modal = document.getElementById('eventModal');
         const modalTitle = document.getElementById('modalTitle');
-
-        if (openBtn && modal) {
-            openBtn.addEventListener('click', () => {
-                modal.classList.add('show');
-                setTimeout(() => {
-                    document.getElementById('eventTitle').focus();
-                }, 100);
-            });
+        const saveBtn = document.getElementById('saveEventBtn');
+        
+        if (modal && modalTitle && saveBtn) {
+            this.resetForm();
+            modalTitle.textContent = 'Добавить новое событие';
+            saveBtn.innerHTML = `
+                <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+                    <path fill="white" d="M17,3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V7L17,3M19,19H5V5H16.17L19,7.83V19M12,12A4,4 0 0,0 8,16A4,4 0 0,0 12,20A4,4 0 0,0 16,16A4,4 0 0,0 12,12Z" />
+                </svg>
+                Сохранить событие
+            `;
+            modal.classList.add('show');
+            setTimeout(() => {
+                document.getElementById('eventTitle').focus();
+            }, 100);
         }
+    }
+
+    setupModal() {
+        const closeBtn = document.getElementById('closeEventModal');
+        const modal = document.getElementById('eventModal');
 
         if (closeBtn && modal) {
             closeBtn.addEventListener('click', () => {
@@ -372,24 +403,9 @@ export class EternalFlowApp {
 
     resetForm() {
         const titleInput = document.getElementById('eventTitle');
-        const saveBtn = document.getElementById('saveEventBtn');
-        const modalTitle = document.getElementById('modalTitle');
-
         if (titleInput) titleInput.value = '';
         this.setCurrentDateTime();
-
-        if (saveBtn) {
-            saveBtn.innerHTML = `
-                <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
-                    <path fill="white" d="M17,3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V7L17,3M19,19H5V5H16.17L19,7.83V19M12,12A4,4 0 0,0 8,16A4,4 0 0,0 12,20A4,4 0 0,0 16,16A4,4 0 0,0 12,12Z"/>
-                </svg>
-                Сохранить событие
-            `;
-        }
-
-        if (modalTitle) {
-            modalTitle.textContent = 'Добавить новое событие';
-        }
+        this.editingEventId = null;
     }
 
     async saveEventForm() {
@@ -427,7 +443,6 @@ export class EternalFlowApp {
                     await this.saveEvent(event);
                     this.showNotification('Событие обновлено', 'success');
                 }
-                this.editingEventId = null;
             } else {
                 await this.saveEvent({
                     title,
@@ -437,8 +452,7 @@ export class EternalFlowApp {
             }
 
             await this.loadEvents();
-
-            if (modal) modal.classList.remove('show');
+            modal.classList.remove('show');
             this.resetForm();
 
         } catch (error) {
@@ -572,9 +586,12 @@ export class EternalFlowApp {
         const container = document.getElementById('eventsContainer');
         if (!container) return;
 
-        while (container.firstChild) {
-            container.removeChild(container.firstChild);
+        if (this.isLoading) {
+            this.renderSkeletons();
+            return;
         }
+
+        container.innerHTML = '';
 
         let filteredEvents = [...this.events];
         const now = new Date();
@@ -708,7 +725,7 @@ export class EternalFlowApp {
 
     startTimers() {
         if (this.timerUpdateInterval) {
-            clearInterval(this.timerUpdateInterval);
+            cancelAnimationFrame(this.timerUpdateInterval);
         }
 
         const updateTimers = () => {
@@ -767,9 +784,7 @@ export class EternalFlowApp {
             }
         }
 
-        while (container.firstChild) {
-            container.removeChild(container.firstChild);
-        }
+        container.innerHTML = '';
 
         if (!timerFrag.hasChildNodes()) {
             const unitDiv = document.createElement('div');
@@ -949,12 +964,18 @@ export class EternalFlowApp {
                 .then(registration => {
                     console.log('Service Worker зарегистрирован:', registration);
 
-
+                    // Проверка обновлений при запуске
                     registration.update();
 
+                    // Обновление при изменении контроллера
                     navigator.serviceWorker.addEventListener('controllerchange', () => {
                         window.location.reload();
                     });
+
+                    // Периодическая проверка обновлений
+                    setInterval(() => {
+                        registration.update();
+                    }, 60 * 60 * 1000); // Каждый час
                 })
                 .catch(err => {
                     console.error('Ошибка регистрации Service Worker:', err);

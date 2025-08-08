@@ -1,11 +1,12 @@
-const APP_VERSION = "2.2.0";
+const APP_VERSION = "2.2.2";
 const CACHE_NAME = `EternalFlow-v${APP_VERSION}`;
 const PRECACHE_URLS = [
     './',
     './index.html',
     './styles.css',
     './app.js',
-    './manifest.webmanifest',
+    './manifest.json',
+    './icon-32.png',
     './icon-192.png',
     './icon-512.png'
 ];
@@ -34,18 +35,30 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
     if (event.request.method !== 'GET') return;
-    
+
     event.respondWith(
-        fetch(event.request)
-            .then(networkResponse => {
-                const responseClone = networkResponse.clone();
-                caches.open(CACHE_NAME)
-                    .then(cache => cache.put(event.request, responseClone));
-                return networkResponse;
-            })
-            .catch(() => {
-                return caches.match(event.request)
-                    .then(cachedResponse => cachedResponse || caches.match('./'));
+        caches.match(event.request)
+            .then(cachedResponse => {
+                if (cachedResponse) {
+                    return cachedResponse;
+                }
+
+                return fetch(event.request).then(response => {
+                    if (!response || response.status !== 200 || response.type !== 'basic') {
+                        return response;
+                    }
+
+                    const responseToCache = response.clone();
+
+                    caches.open(CACHE_NAME)
+                        .then(cache => {
+                            cache.put(event.request, responseToCache);
+                        });
+
+                    return response;
+                });
+            }).catch(() => {
+                return caches.match('./index.html');
             })
     );
 });
