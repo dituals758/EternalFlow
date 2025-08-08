@@ -1,10 +1,12 @@
-const CACHE_NAME = 'eternal-flow-v1.1';
+const CACHE_NAME = 'eternal-flow-v1.2';
 const PRECACHE_URLS = [
   '/',
   '/index.html',
   '/styles.css',
   '/app.js',
-  '/manifest.json'
+  '/manifest.json',
+  '/icon-192.png',
+  '/icon-512.png'
 ];
 
 // Установочная фаза: кэшируем ключевые файлы

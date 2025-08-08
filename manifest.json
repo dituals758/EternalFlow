@@ -1,24 +1,25 @@
 {
   "name": "Вечный поток",
   "short_name": "Вечный поток",
-  "start_url": "/index.html",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#0c0d2d",
   "theme_color": "#36bff1",
   "description": "Элегантный мастер отслеживания времени - записывайте важные моменты",
-  "scope": "/",
   "categories": ["Инструменты", "Продуктивность"],
-  "icons": [
-    {
-      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTEyLDIgQTEwLDEwIDAgMCwwIDIsMTIgQTEwLDEwIDAgMCwwIDEyLDIyIEExMCwxMCAwIDAsMCAyMiwxMiBBMTAsMTAgMCAwLDAgMTIsMiBNMTIsNCBBOCw4IDAgMCwxIDIwLDEyIEE4LDggMCAwLDEgMTIsMjAgQTgsOCAwIDAsMSA0LDEyIEE4LDggMCAwLDEgMTIsNCBNMTIsNiBBNiw2IDAgMCwwIDYsMTIgQTYsNiAwIDAsMCAxMiwxOCBBNiw2IDAgMCwwIDE4LDEyIEE2LDYgMCAwLDAgMTIsNiIvPjxwYXRoIGZpbGw9IiMzNmJmZjEiIGQ9Ik0xMiw4IEExLDQgMCAwLDEgMTYsMTIgQTQsNCAwIDAsMSAxMiwxNiBBNCw0IDAgMCwxIDgsMTIgQTQsNCAwIDAsMSAxMiw4Ii8+PC9zdmc+",
-      "sizes": "192x192",
-      "type": "image/svg+xml"
-    },
-    {
-      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTEyLDIgQTEwLDEwIDAgMCwwIDIsMTIgQTEwLDEwIDAgMCwwIDEyLDIyIEExMCwxMCAwIDAsMCAyMiwxMiBBMTAsMTAgMCAwLDAgMTIsMiBNMTIsNCBBOCw4IDAgMCwxIDIwLDEyIEE4LDggMCAwLDEgMTIsMjAgQTgsOCAwIDAsMSA0LDEyIEE4LDggMCAwLDEgMTIsNCBNMTIsNiBBNiw2IDAgMCwwIDYsMTIgQTYsNiAwIDAsMCAxMiwxOCBBNiw2IDAgMCwwIDE4LDEyIEE2LDYgMCAwLDAgMTIsNiIvPjxwYXRoIGZpbGw9IiMzNmJmZjEiIGQ9Ik0xMiw4IEExLDQgMCAwLDEgMTYsMTIgQTQsNCAwIDAsMSAxMiwxNiBBNCw0IDAgMCwxIDgsMTIgQTQsNCAwIDAsMSAxMiw4Ii8+PC9zdmc+",
-      "sizes": "512x512",
-      "type": "image/svg+xml"
-    }
-  ],
+    "icons": [
+        {
+            "src": "./icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "./icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        }
+    ],
   "splash_pages": null
 }
