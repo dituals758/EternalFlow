@@ -1,7 +1,7 @@
 export class EternalFlowApp {
     constructor() {
         this.config = {
-            APP_VERSION: '1.0.0',
+            APP_VERSION: '1.0.1',
             DB_NAME: 'EternalFlowDB',
             DB_VERSION: 1,
             TIME_UNITS: [
@@ -23,7 +23,6 @@ export class EternalFlowApp {
         this.sort = 'date-asc';
         this.searchQuery = '';
         this.db = null;
-        this.isLoading = true;
         this.lastScrollPosition = 0;
 
         this.init();
@@ -34,7 +33,6 @@ export class EternalFlowApp {
             this.createParticles();
             await this.initDB();
             await this.loadSettings();
-            this.renderSkeletons();
             await this.loadEvents();
             this.setupEventListeners();
             this.startTimers();
@@ -44,11 +42,8 @@ export class EternalFlowApp {
             this.setAppVersion();
             this.setupModal();
             this.setupScrollHide();
-            this.isLoading = false;
         } catch (error) {
             console.error('Initialization error:', error);
-            this.isLoading = false;
-            this.renderEvents();
             this.showNotification('Ошибка инициализации приложения', 'error');
         }
     }
@@ -102,19 +97,6 @@ export class EternalFlowApp {
                 reject(event.target.error);
             };
         });
-    }
-
-    renderSkeletons() {
-        const container = document.getElementById('eventsContainer');
-        if (!container) return;
-        
-        container.innerHTML = '';
-        
-        for (let i = 0; i < 3; i++) {
-            const skeletonCard = document.createElement('div');
-            skeletonCard.className = 'skeleton skeleton-card';
-            container.appendChild(skeletonCard);
-        }
     }
 
     async saveEvent(event) {
@@ -260,13 +242,13 @@ export class EternalFlowApp {
         if (!container) return;
 
         const colors = ['#b2ccf6', '#36bff1', '#9f5ae3', '#2059c2', '#122878'];
-        const particleCount = 20;
+        const particleCount = 15;
 
         for (let i = 0; i < particleCount; i++) {
             const particle = document.createElement('div');
             particle.classList.add('particle');
 
-            const size = Math.random() * 4 + 1;
+            const size = Math.random() * 3 + 1;
             const posX = Math.random() * 100;
             const posY = Math.random() * 100;
             const duration = Math.random() * 10 + 10;
@@ -278,7 +260,7 @@ export class EternalFlowApp {
                 left: ${posX}%;
                 top: ${posY}%;
                 background: ${colors[Math.floor(Math.random() * colors.length)]};
-                opacity: ${Math.random() * 0.2 + 0.05};
+                opacity: ${Math.random() * 0.15 + 0.05};
                 animation-duration: ${duration}s;
                 animation-delay: ${delay}s;
                 border-radius: 50%;
@@ -375,22 +357,18 @@ export class EternalFlowApp {
             const currentScroll = window.pageYOffset || document.documentElement.scrollTop;
             const scrollingDown = currentScroll > lastScrollTop;
             
-            // Показываем при скролле вверх или начало скролла
             if (currentScroll > 50) {
                 headerControls.classList.remove('hidden');
             }
             
-            // Скрываем при скролле вниз
             if (scrollingDown && currentScroll > 100) {
                 headerControls.classList.add('hidden');
             } else {
                 headerControls.classList.remove('hidden');
             }
             
-            // Обновляем позицию
             lastScrollTop = currentScroll;
             
-            // Скрываем через 3 секунды бездействия
             clearTimeout(scrollTimeout);
             scrollTimeout = setTimeout(() => {
                 if (currentScroll > 100) {
@@ -630,11 +608,6 @@ export class EternalFlowApp {
     renderEvents() {
         const container = document.getElementById('eventsContainer');
         if (!container) return;
-
-        if (this.isLoading) {
-            this.renderSkeletons();
-            return;
-        }
 
         container.innerHTML = '';
 
@@ -948,7 +921,6 @@ export class EternalFlowApp {
                     return;
                 }
 
-                // Save all valid events
                 for (const event of validEvents) {
                     await this.saveEvent(event);
                 }
@@ -1008,19 +980,13 @@ export class EternalFlowApp {
             navigator.serviceWorker.register('./service-worker.js')
                 .then(registration => {
                     console.log('Service Worker зарегистрирован:', registration);
-
-                    // Проверка обновлений при запуске
                     registration.update();
-
-                    // Обновление при изменении контроллера
                     navigator.serviceWorker.addEventListener('controllerchange', () => {
                         window.location.reload();
                     });
-
-                    // Периодическая проверка обновлений
                     setInterval(() => {
                         registration.update();
-                    }, 60 * 60 * 1000); // Каждый час
+                    }, 60 * 60 * 1000);
                 })
                 .catch(err => {
                     console.error('Ошибка регистрации Service Worker:', err);

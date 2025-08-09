@@ -30,5 +30,21 @@
     {
       "platform": "web"
     }
-  ]
+  ],
+  "screenshots": [
+  {
+    "src": "screenshot1.png",
+    "sizes": "1280x720",
+    "type": "image/png",
+    "form_factor": "wide",
+    "label": "Home screen showing main navigation and featured content"
+  },
+  {
+    "src": "screenshots/dashboard.webp",
+    "sizes": "1280x720",
+    "type": "image/webp",
+    "platform": "ios",
+    "label": "Dashboard view displaying key metrics"
+  }
+]
 }
