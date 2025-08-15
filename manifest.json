@@ -1,12 +1,12 @@
 {
-  "name": "Eternal Flow",
-  "short_name": "Eternal Flow",
+  "name": "EternalFlow",
+  "short_name": "EternalFlow",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#0c0d2d",
-  "theme_color": "#36bff1",
-  "description": "Приложение для отслеживания времени - записывайте важные моменты",
+  "theme_color": "#29B6F6",
+  "description": "Приложение для отслеживания времени до и после важных событий",
   "categories": [
     "Инструменты",
     "Продуктивность"
@@ -32,19 +32,12 @@
     }
   ],
   "screenshots": [
-  {
-    "src": "screenshot1.png",
-    "sizes": "1280x720",
-    "type": "image/png",
-    "form_factor": "wide",
-    "label": "Home screen showing main navigation and featured content"
-  },
-  {
-    "src": "screenshots/dashboard.webp",
-    "sizes": "1280x720",
-    "type": "image/webp",
-    "platform": "ios",
-    "label": "Dashboard view displaying key metrics"
-  }
-]
+    {
+      "src": "./screenshot1.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Главный экран приложения EternalFlow"
+    }
+  ]
 }

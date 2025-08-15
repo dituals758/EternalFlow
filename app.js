@@ -1,7 +1,7 @@
 export class EternalFlowApp {
     constructor() {
         this.config = {
-            APP_VERSION: '1.0.1',
+            APP_VERSION: '1.0.2',
             DB_NAME: 'EternalFlowDB',
             DB_VERSION: 1,
             TIME_UNITS: [
@@ -241,7 +241,7 @@ export class EternalFlowApp {
         const container = document.getElementById('particles');
         if (!container) return;
 
-        const colors = ['#b2ccf6', '#36bff1', '#9f5ae3', '#2059c2', '#122878'];
+        const colors = ['#29B6F6', '#7E57C2', '#BBDEFB', '#1565C0', '#1A237E'];
         const particleCount = 15;
 
         for (let i = 0; i < particleCount; i++) {
@@ -388,7 +388,7 @@ export class EternalFlowApp {
             modalTitle.textContent = 'Добавить новое событие';
             saveBtn.innerHTML = `
                 <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
-                    <path fill="white" d="M17,3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V7L17,3M19,19H5V5H16.17L19,7.83V19M12,12A4,4 0 0,0 8,16A4,4 0 0,0 12,20A4,4 0 0,0 16,16A4,4 0 0,0 12,12Z" />
+                    <path fill="white" d="M17,3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V7L17,3M19,19H5V18H5M19,9H15V3H9V9H5L12,16L19,9Z" />
                 </svg>
                 Сохранить событие
             `;
@@ -446,7 +446,7 @@ export class EternalFlowApp {
         }
 
         if (!dateTime) {
-            this.showNotification('Выберите дату и время', 'error');
+            this.showNotification('Укажите дату и время события', 'error');
             dateInput?.focus();
             return;
         }
@@ -527,7 +527,7 @@ export class EternalFlowApp {
         modal.className = 'confirmation-modal';
         modal.innerHTML = `
             <div class="modal-content">
-                <p>Вы уверены, что хотите удалить это событие?</p>
+                <p>Удалить это событие навсегда?</p>
                 <div class="modal-buttons">
                     <button id="confirmDelete" class="btn danger">Удалить</button>
                     <button id="cancelDelete" class="btn">Отмена</button>
@@ -568,7 +568,7 @@ export class EternalFlowApp {
         modal.className = 'confirmation-modal';
         modal.innerHTML = `
             <div class="modal-content">
-                <p>Вы уверены, что хотите удалить ВСЕ события? Это действие нельзя отменить.</p>
+                <p>Удалить ВСЕ события безвозвратно?</p>
                 <div class="modal-buttons">
                     <button id="confirmClear" class="btn danger">Удалить всё</button>
                     <button id="cancelClear" class="btn">Отмена</button>
@@ -649,8 +649,8 @@ export class EternalFlowApp {
             emptyState.setAttribute('aria-label', 'Нет событий');
             emptyState.innerHTML = `
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#36bff1" d="M256,32C132.3,32,32,132.3,32,256s100.3,224,224,224s224-100.3,224-224S379.7,32,256,32z M410.5,297.5l-32.9,32.9l-16.5-16.5l32.9-32.9L410.5,297.5z M365.9,252.9l-32.9,32.9l-16.5-16.5l32.9-32.9L365.9,252.9z M321.3,208.3l-32.9,32.9l-16.5-16.5l32.9-32.9L321.3,208.3z M276.7,163.7l-32.9,32.9l-16.5-16.5l32.9-32.9L276.7,163.7z"/></svg>
-                <p>Нет событий</p>
-                <p>${this.searchQuery ? 'Попробуйте изменить поисковый запрос' : 'Добавьте события для отслеживания'}</p>
+                <p>Событий пока нет</p>
+                <p>${this.searchQuery ? 'Попробуйте изменить запрос' : 'Добавьте первое событие'}</p>
             `;
             container.appendChild(emptyState);
             return;
@@ -695,7 +695,7 @@ export class EternalFlowApp {
             dateDiv.setAttribute('aria-label', 'Дата события');
             dateDiv.title = this.formatFullDate(new Date(event.date));
             dateDiv.innerHTML = `
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" fill="#36bff1"/></svg>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" fill="#29B6F6"/></svg>
                 ${this.formatDate(new Date(event.date))}
             `;
 
@@ -714,7 +714,7 @@ export class EternalFlowApp {
             editBtn.setAttribute('aria-label', 'Редактировать событие');
             editBtn.innerHTML = `
                 <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z" fill="#36bff1"/>
+                    <path d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z" fill="#29B6F6"/>
                 </svg>
             `;
             editBtn.addEventListener('click', () => this.editEvent(event.id));
@@ -946,13 +946,13 @@ export class EternalFlowApp {
         let icon = '';
         switch (type) {
             case 'success':
-                icon = '<svg viewBox="0 0 24 24"><path fill="#36f1b3" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"/></svg>';
+                icon = '<svg viewBox="0 0 24 24"><path fill="#36F1B3" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L17.59,5.59L19,8L10,17Z"/></svg>';
                 break;
             case 'error':
                 icon = '<svg viewBox="0 0 24 24"><path fill="#ff6b6b" d="M13,13H11V7H13M13,17H11V15H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/></svg>';
                 break;
             default:
-                icon = '<svg viewBox="0 0 24 24"><path fill="#36bff1" d="M13,9H11V7H13M13,17H11V11H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/></svg>';
+                icon = '<svg viewBox="0 0 24 24"><path fill="#29B6F6" d="M13,9H11V7H13M13,17H11V11H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/></svg>';
                 break;
         }
 
