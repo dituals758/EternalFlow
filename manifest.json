@@ -34,7 +34,7 @@
   "screenshots": [
     {
       "src": "./screenshot1.png",
-      "sizes": "1280x720",
+      "sizes": "1290x2796",
       "type": "image/png",
       "form_factor": "wide",
       "label": "Главный экран приложения EternalFlow"

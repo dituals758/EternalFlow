@@ -1,7 +1,7 @@
 export class EternalFlowApp {
     constructor() {
         this.config = {
-            APP_VERSION: '1.0.2',
+            APP_VERSION: '1.0.3',
             DB_NAME: 'EternalFlowDB',
             DB_VERSION: 1,
             TIME_UNITS: [
@@ -24,6 +24,7 @@ export class EternalFlowApp {
         this.searchQuery = '';
         this.db = null;
         this.lastScrollPosition = 0;
+        this.searchExpanded = false;
 
         this.init();
     }
@@ -342,12 +343,72 @@ export class EternalFlowApp {
                     this.editingEventId = null;
                     this.resetForm();
                 }
+                
+                const filterModal = document.getElementById('filterModal');
+                if (filterModal.classList.contains('show')) {
+                    filterModal.classList.remove('show');
+                }
+                
+                if (this.searchExpanded) {
+                    this.searchExpanded = false;
+                    document.getElementById('searchExpanded').style.display = 'none';
+                }
+            }
+        });
+        
+        // Новые обработчики для компактного UI
+        const searchToggle = document.getElementById('searchToggle');
+        const searchExpanded = document.getElementById('searchExpanded');
+        const closeSearch = document.getElementById('closeSearch');
+
+        if (searchToggle && searchExpanded) {
+            searchToggle.addEventListener('click', () => {
+                this.searchExpanded = !this.searchExpanded;
+                searchExpanded.style.display = this.searchExpanded ? 'block' : 'none';
+                
+                if (this.searchExpanded) {
+                    setTimeout(() => {
+                        const searchInput = document.getElementById('searchInput');
+                        if (searchInput) searchInput.focus();
+                    }, 100);
+                }
+            });
+        }
+
+        if (closeSearch) {
+            closeSearch.addEventListener('click', () => {
+                this.searchExpanded = false;
+                searchExpanded.style.display = 'none';
+                this.searchQuery = '';
+                this.renderEvents();
+            });
+        }
+
+        const filterToggle = document.getElementById('filterToggle');
+        const filterModal = document.getElementById('filterModal');
+        const closeFilterModal = document.getElementById('closeFilterModal');
+
+        if (filterToggle && filterModal) {
+            filterToggle.addEventListener('click', () => {
+                filterModal.classList.add('show');
+            });
+        }
+
+        if (closeFilterModal) {
+            closeFilterModal.addEventListener('click', () => {
+                filterModal.classList.remove('show');
+            });
+        }
+
+        filterModal.addEventListener('click', (e) => {
+            if (e.target === filterModal) {
+                filterModal.classList.remove('show');
             }
         });
     }
 
     setupScrollHide() {
-        const headerControls = document.getElementById('headerControls');
+        const headerControls = document.querySelector('.app-header');
         if (!headerControls) return;
         
         let lastScrollTop = 0;
@@ -509,7 +570,7 @@ export class EternalFlowApp {
 
             saveBtn.innerHTML = `
                 <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
-                    <path fill="white" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"/>
+                    <path fill="white" d="M21,7L9,19L3.5,13.5L4.91,10.59L9,16.17L17.59,5.59L19,8L10,17Z"/>
                 </svg>
                 Сохранить изменения
             `;
@@ -650,7 +711,7 @@ export class EternalFlowApp {
             emptyState.innerHTML = `
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#36bff1" d="M256,32C132.3,32,32,132.3,32,256s100.3,224,224,224s224-100.3,224-224S379.7,32,256,32z M410.5,297.5l-32.9,32.9l-16.5-16.5l32.9-32.9L410.5,297.5z M365.9,252.9l-32.9,32.9l-16.5-16.5l32.9-32.9L365.9,252.9z M321.3,208.3l-32.9,32.9l-16.5-16.5l32.9-32.9L321.3,208.3z M276.7,163.7l-32.9,32.9l-16.5-16.5l32.9-32.9L276.7,163.7z"/></svg>
                 <p>Событий пока нет</p>
-                <p>${this.searchQuery ? 'Попробуйте изменить запрос' : 'Добавьте первое событие'}</p>
+                <p>${this.searchQuery || this.filter !== 'all' ? 'Измените фильтры или запрос' : 'Добавьте первое событие'}</p>
             `;
             container.appendChild(emptyState);
             return;
