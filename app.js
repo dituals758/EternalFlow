@@ -1,9 +1,9 @@
 export class EternalFlowApp {
     constructor() {
         this.config = {
-            APP_VERSION: '1.0.3',
+            APP_VERSION: '1.1.0',
             DB_NAME: 'EternalFlowDB',
-            DB_VERSION: 1,
+            DB_VERSION: 2,
             TIME_UNITS: [
                 { name: 'years', divisor: 31536000000, labels: ['лет', 'года', 'год'] },
                 { name: 'months', divisor: 2628000000, labels: ['месяцев', 'месяца', 'месяц'] },
@@ -12,7 +12,8 @@ export class EternalFlowApp {
                 { name: 'minutes', divisor: 60000, labels: ['минут', 'минуты', 'минута'] },
                 { name: 'seconds', divisor: 1000, labels: ['секунд', 'секунды', 'секунда'] }
             ],
-            MAX_EVENTS: 100
+            MAX_EVENTS: 200,
+            VISIBLE_EVENTS: 10
         };
 
         this.events = [];
@@ -25,6 +26,7 @@ export class EternalFlowApp {
         this.db = null;
         this.lastScrollPosition = 0;
         this.searchExpanded = false;
+        this.visibleEvents = this.config.VISIBLE_EVENTS;
 
         this.init();
     }
@@ -43,6 +45,8 @@ export class EternalFlowApp {
             this.setAppVersion();
             this.setupModal();
             this.setupScrollHide();
+            this.setupInfiniteScroll();
+            this.setupNetworkStatus();
         } catch (error) {
             console.error('Initialization error:', error);
             this.showNotification('Ошибка инициализации приложения', 'error');
@@ -58,6 +62,7 @@ export class EternalFlowApp {
                 if (!db.objectStoreNames.contains('events')) {
                     const store = db.createObjectStore('events', { keyPath: 'id' });
                     store.createIndex('date', 'date', { unique: false });
+                    store.createIndex('title', 'title', { unique: false });
                 }
 
                 if (!db.objectStoreNames.contains('settings')) {
@@ -151,20 +156,24 @@ export class EternalFlowApp {
         return new Promise((resolve) => {
             const transaction = this.db.transaction(['settings'], 'readonly');
             const store = transaction.objectStore('settings');
+            const settingsToLoad = ['filter', 'sort'];
 
-            ['filter', 'sort'].forEach(name => {
-                const request = store.get(name);
-                request.onsuccess = (event) => {
-                    if (event.target.result) {
-                        this[name] = event.target.result.value;
-                    }
-                };
+            const requests = settingsToLoad.map(name => {
+                return new Promise(resolve => {
+                    const request = store.get(name);
+                    request.onsuccess = () => {
+                        if (request.result) {
+                            this[name] = request.result.value;
+                        }
+                        resolve();
+                    };
+                });
             });
 
-            transaction.oncomplete = () => {
+            Promise.all(requests).then(() => {
                 this.applySettings();
                 resolve();
-            };
+            });
         });
     }
 
@@ -243,7 +252,7 @@ export class EternalFlowApp {
         if (!container) return;
 
         const colors = ['#29B6F6', '#7E57C2', '#BBDEFB', '#1565C0', '#1A237E'];
-        const particleCount = 15;
+        const particleCount = window.innerWidth < 768 ? 10 : 15;
 
         for (let i = 0; i < particleCount; i++) {
             const particle = document.createElement('div');
@@ -356,7 +365,6 @@ export class EternalFlowApp {
             }
         });
         
-        // Новые обработчики для компактного UI
         const searchToggle = document.getElementById('searchToggle');
         const searchExpanded = document.getElementById('searchExpanded');
         const closeSearch = document.getElementById('closeSearch');
@@ -436,6 +444,29 @@ export class EternalFlowApp {
                     headerControls.classList.add('hidden');
                 }
             }, 3000);
+        });
+    }
+
+    setupInfiniteScroll() {
+        const container = document.getElementById('eventsContainer');
+        if (!container) return;
+
+        container.addEventListener('scroll', () => {
+            const { scrollTop, scrollHeight, clientHeight } = container;
+            if (scrollTop + clientHeight >= scrollHeight - 100) {
+                this.visibleEvents += this.config.VISIBLE_EVENTS;
+                this.renderEvents();
+            }
+        });
+    }
+
+    setupNetworkStatus() {
+        window.addEventListener('offline', () => {
+            this.showNotification('Вы в автономном режиме', 'info');
+        });
+
+        window.addEventListener('online', () => {
+            this.showNotification('Соединение восстановлено', 'success');
         });
     }
 
@@ -666,14 +697,9 @@ export class EternalFlowApp {
         });
     }
 
-    renderEvents() {
-        const container = document.getElementById('eventsContainer');
-        if (!container) return;
-
-        container.innerHTML = '';
-
-        let filteredEvents = [...this.events];
+    getFilteredEvents() {
         const now = new Date();
+        let filteredEvents = [...this.events];
 
         if (this.filter === 'upcoming') {
             filteredEvents = filteredEvents.filter(e => new Date(e.date) > now);
@@ -704,7 +730,19 @@ export class EternalFlowApp {
             }
         });
 
-        if (filteredEvents.length === 0) {
+        return filteredEvents;
+    }
+
+    renderEvents() {
+        const container = document.getElementById('eventsContainer');
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        const filteredEvents = this.getFilteredEvents();
+        const eventsToRender = filteredEvents.slice(0, this.visibleEvents);
+
+        if (eventsToRender.length === 0) {
             const emptyState = document.createElement('div');
             emptyState.className = 'empty-state';
             emptyState.setAttribute('aria-label', 'Нет событий');
@@ -717,10 +755,13 @@ export class EternalFlowApp {
             return;
         }
 
-        filteredEvents.forEach(event => {
+        const fragment = document.createDocumentFragment();
+        
+        eventsToRender.forEach(event => {
             const card = document.createElement('div');
             card.className = 'event-card';
             card.dataset.id = event.id;
+            card.setAttribute('aria-label', `Событие: ${event.title}`);
 
             const header = document.createElement('div');
             header.className = 'event-header';
@@ -766,13 +807,14 @@ export class EternalFlowApp {
             const timerContainer = document.createElement('div');
             timerContainer.className = 'time-grid';
             timerContainer.id = `timer-${event.id}`;
+            timerContainer.setAttribute('aria-live', 'polite');
 
             const actionsDiv = document.createElement('div');
             actionsDiv.className = 'event-actions';
 
             const editBtn = document.createElement('button');
             editBtn.className = 'edit-btn';
-            editBtn.setAttribute('aria-label', 'Редактировать событие');
+            editBtn.setAttribute('aria-label', `Редактировать событие: ${event.title}`);
             editBtn.innerHTML = `
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z" fill="#29B6F6"/>
@@ -782,7 +824,7 @@ export class EternalFlowApp {
 
             const deleteBtn = document.createElement('button');
             deleteBtn.className = 'delete-btn';
-            deleteBtn.setAttribute('aria-label', 'Удалить событие');
+            deleteBtn.setAttribute('aria-label', `Удалить событие: ${event.title}`);
             deleteBtn.innerHTML = `
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z" fill="#ff6b6b"/>
@@ -797,22 +839,21 @@ export class EternalFlowApp {
             card.appendChild(timerContainer);
             card.appendChild(actionsDiv);
 
-            container.appendChild(card);
+            fragment.appendChild(card);
             this.updateTimer(event.id);
         });
+
+        container.appendChild(fragment);
     }
 
     startTimers() {
         if (this.timerUpdateInterval) {
-            cancelAnimationFrame(this.timerUpdateInterval);
+            clearInterval(this.timerUpdateInterval);
         }
 
-        const updateTimers = () => {
+        this.timerUpdateInterval = setInterval(() => {
             this.updateAllTimers();
-            this.timerUpdateInterval = requestAnimationFrame(updateTimers);
-        };
-
-        updateTimers();
+        }, 1000);
     }
 
     updateAllTimers() {
@@ -1041,13 +1082,19 @@ export class EternalFlowApp {
             navigator.serviceWorker.register('./service-worker.js')
                 .then(registration => {
                     console.log('Service Worker зарегистрирован:', registration);
-                    registration.update();
+                    
+                    // Проверка обновлений каждый час
+                    setInterval(() => registration.update(), 60 * 60 * 1000);
+                    
+                    // Обработка обновления приложения
                     navigator.serviceWorker.addEventListener('controllerchange', () => {
                         window.location.reload();
                     });
-                    setInterval(() => {
-                        registration.update();
-                    }, 60 * 60 * 1000);
+                    
+                    // Сообщение о готовности к работе в офлайне
+                    if (navigator.serviceWorker.controller) {
+                        this.showNotification('Приложение готово к работе офлайн', 'success');
+                    }
                 })
                 .catch(err => {
                     console.error('Ошибка регистрации Service Worker:', err);
