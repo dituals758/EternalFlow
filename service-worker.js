@@ -1,4 +1,4 @@
-const APP_VERSION = "1.0.4";
+const APP_VERSION = "1.1.1";
 const CACHE_NAME = `EternalFlow-v${APP_VERSION}`;
 const PRECACHE_URLS = [
     './',
@@ -35,6 +35,11 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
     if (event.request.method !== 'GET') return;
+    
+    // Не кэшируем запросы к базе данных
+    if (event.request.url.includes('/EternalFlowDB')) {
+        return fetch(event.request);
+    }
 
     event.respondWith(
         caches.match(event.request)
