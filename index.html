@@ -15,8 +15,7 @@
 </head>
 
 <body>
-    <div class="dynamic-island" id="dynamicIsland" aria-label="Установка приложения" role="group"
-        style="display: none;">
+    <div class="dynamic-island" id="dynamicIsland" aria-label="Установка приложения" role="group" style="display: none;">
         <div class="island-text">Установить EternalFlow</div>
     </div>
 
@@ -236,5 +235,13 @@
     <div class="notification" id="notification" role="status" aria-live="polite"></div>
 
     <script type="module" src="./app.js"></script>
+    <script>
+        // Обработчик для перезагрузки при обновлении Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                window.location.reload();
+            });
+        }
+    </script>
 </body>
 </html>

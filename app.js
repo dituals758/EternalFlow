@@ -1,7 +1,7 @@
 export class EternalFlowApp {
     constructor() {
         this.config = {
-            APP_VERSION: '1.1.1',
+            APP_VERSION: '1.1.2',
             DB_NAME: 'EternalFlowDB',
             DB_VERSION: 3,
             TIME_UNITS: [
@@ -24,8 +24,6 @@ export class EternalFlowApp {
         this.sort = 'date-asc';
         this.searchQuery = '';
         this.db = null;
-        this.lastScrollPosition = 0;
-        this.searchExpanded = false;
         this.visibleEvents = this.config.VISIBLE_EVENTS;
 
         this.init();
@@ -33,10 +31,11 @@ export class EternalFlowApp {
 
     async init() {
         try {
-            this.createParticles();
             await this.initDB();
-            await this.loadSettings();
             await this.loadEvents();
+            await this.loadSettings();
+            
+            this.createParticles();
             this.setupEventListeners();
             this.startTimers();
             this.setCurrentDateTime();
@@ -47,6 +46,8 @@ export class EternalFlowApp {
             this.setupScrollHide();
             this.setupInfiniteScroll();
             this.setupNetworkStatus();
+            
+            this.renderEvents();
         } catch (error) {
             console.error('Initialization error:', error);
             this.showNotification('Ошибка инициализации приложения', 'error');
@@ -73,7 +74,6 @@ export class EternalFlowApp {
                     }
                 }
                 
-                // Миграция для версии 2: добавление поля createdAt
                 if (oldVersion < 2) {
                     const transaction = event.target.transaction;
                     const eventsStore = transaction.objectStore('events');
@@ -89,7 +89,6 @@ export class EternalFlowApp {
                     };
                 }
                 
-                // Миграция для версии 3: добавление индекса для createdAt
                 if (oldVersion < 3) {
                     const transaction = event.target.transaction;
                     const eventsStore = transaction.objectStore('events');
@@ -123,7 +122,6 @@ export class EternalFlowApp {
 
             request.onsuccess = (event) => {
                 this.events = event.target.result || [];
-                this.renderEvents();
                 resolve();
             };
 
@@ -142,7 +140,6 @@ export class EternalFlowApp {
             const transaction = this.db.transaction(['events'], 'readwrite');
             const store = transaction.objectStore('events');
 
-            // Проверка лимита событий только для новых событий
             if (!event.id && this.events.length >= this.config.MAX_EVENTS) {
                 this.showNotification(`Достигнут лимит событий (${this.config.MAX_EVENTS})`, 'error');
                 reject(new Error('Event limit reached'));
@@ -212,7 +209,6 @@ export class EternalFlowApp {
             });
 
             Promise.all(requests).then(() => {
-                this.applySettings();
                 resolve();
             });
         });
@@ -238,8 +234,6 @@ export class EternalFlowApp {
     }
 
     applySettings() {
-        this.renderEvents();
-
         const filterSelect = document.getElementById('filterSelect');
         if (filterSelect) filterSelect.value = this.filter;
 
@@ -339,7 +333,10 @@ export class EternalFlowApp {
     setupEventListeners() {
         const saveBtn = document.getElementById('saveEventBtn');
         if (saveBtn) {
-            saveBtn.addEventListener('click', () => this.saveEventForm());
+            saveBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.saveEventForm();
+            });
         }
 
         const titleInput = document.getElementById('eventTitle');
@@ -354,10 +351,22 @@ export class EternalFlowApp {
         const clearBtn = document.getElementById('clearBtn');
         const openBtn = document.getElementById('openEventFormBtn');
 
-        if (importBtn) importBtn.addEventListener('click', () => this.importEvents());
-        if (exportBtn) exportBtn.addEventListener('click', () => this.exportEvents());
-        if (clearBtn) clearBtn.addEventListener('click', () => this.showClearConfirmation());
-        if (openBtn) openBtn.addEventListener('click', () => this.openEventModal());
+        if (importBtn) importBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.importEvents();
+        });
+        if (exportBtn) exportBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.exportEvents();
+        });
+        if (clearBtn) clearBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.showClearConfirmation();
+        });
+        if (openBtn) openBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.openEventModal();
+        });
 
         const filterSelect = document.getElementById('filterSelect');
         if (filterSelect) {
@@ -415,7 +424,8 @@ export class EternalFlowApp {
         const closeSearch = document.getElementById('closeSearch');
 
         if (searchToggle && searchExpanded) {
-            searchToggle.addEventListener('click', () => {
+            searchToggle.addEventListener('click', (e) => {
+                e.preventDefault();
                 this.searchExpanded = !this.searchExpanded;
                 searchExpanded.style.display = this.searchExpanded ? 'block' : 'none';
                 
@@ -429,7 +439,8 @@ export class EternalFlowApp {
         }
 
         if (closeSearch) {
-            closeSearch.addEventListener('click', () => {
+            closeSearch.addEventListener('click', (e) => {
+                e.preventDefault();
                 this.searchExpanded = false;
                 if (searchExpanded) searchExpanded.style.display = 'none';
                 this.searchQuery = '';
@@ -444,13 +455,15 @@ export class EternalFlowApp {
         const closeFilterModal = document.getElementById('closeFilterModal');
 
         if (filterToggle && filterModal) {
-            filterToggle.addEventListener('click', () => {
+            filterToggle.addEventListener('click', (e) => {
+                e.preventDefault();
                 filterModal.classList.add('show');
             });
         }
 
         if (closeFilterModal) {
-            closeFilterModal.addEventListener('click', () => {
+            closeFilterModal.addEventListener('click', (e) => {
+                e.preventDefault();
                 filterModal.classList.remove('show');
             });
         }
@@ -546,7 +559,8 @@ export class EternalFlowApp {
         const modal = document.getElementById('eventModal');
 
         if (closeBtn && modal) {
-            closeBtn.addEventListener('click', () => {
+            closeBtn.addEventListener('click', (e) => {
+                e.preventDefault();
                 modal.classList.remove('show');
                 setTimeout(() => {
                     this.editingEventId = null;
@@ -794,7 +808,10 @@ export class EternalFlowApp {
         const container = document.getElementById('eventsContainer');
         if (!container) return;
 
-        container.innerHTML = '';
+        // Очищаем контейнер
+        while (container.firstChild) {
+            container.removeChild(container.firstChild);
+        }
 
         const filteredEvents = this.getFilteredEvents();
         const eventsToRender = filteredEvents.slice(0, this.visibleEvents);
@@ -804,9 +821,9 @@ export class EternalFlowApp {
             emptyState.className = 'empty-state';
             emptyState.setAttribute('aria-label', 'Нет событий');
             emptyState.innerHTML = `
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#36bff1" d="M256,32C132.3,32,32,132.3,32,256s100.3,224,224,224s224-100.3,224-224S379.7,32,256,32z M410.5,297.5l-32.9,32.9l-16.5-16.5l32.9-32.9L410.5,297.5z M365.9,252.9l-32.9,32.9l-16.5-16.5l32.9-32.9L365.9,252.9z M321.3,208.3l-32.9,32.9l-16.5-16.5l32.9-32.9L321.3,208.3z M276.7,163.7l-32.9,32.9l-16.5-16.5l32.9-32.9L276.7,163.7z"/></svg>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#36bff1" d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
                 <p>Событий пока нет</p>
-                <p>${this.searchQuery || this.filter !== 'all' ? 'Измените фильтры или запрос' : 'Добавьте первое событие'}</p>
+                ${this.searchQuery || this.filter !== 'all' ? '<p>Измените фильтры или запрос</p>' : '<p>Добавьте первое событие</p>'}
             `;
             container.appendChild(emptyState);
             return;
@@ -1150,15 +1167,12 @@ export class EternalFlowApp {
                 .then(registration => {
                     console.log('Service Worker зарегистрирован:', registration);
                     
-                    // Проверка обновлений
                     registration.update();
                     
-                    // Обработка обновления приложения
                     navigator.serviceWorker.addEventListener('controllerchange', () => {
                         window.location.reload();
                     });
                     
-                    // Сообщение о готовности к работе в офлайне
                     if (navigator.serviceWorker.controller) {
                         this.showNotification('Приложение готово к работе офлайн', 'success');
                     }
