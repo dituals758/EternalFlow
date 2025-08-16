@@ -44,6 +44,7 @@
 
 - **Код приложения:** DeepSeek
 - **Иконка приложения:** YandexART:
+~~~
 Minimalist app icon "EternalFlow": Abstract infinity symbol (∞) merging with fluid hourglass silhouette.
 Gradient using #, centered on dark. Alpha background.
 Clean lines, no text, conveying time flow and data privacy.
