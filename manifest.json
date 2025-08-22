@@ -1,6 +1,6 @@
 {
   "name": "EternalFlow",
-  "short_name": "Events",
+  "short_name": "EternalFlow",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

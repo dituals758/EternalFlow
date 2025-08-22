@@ -1,7 +1,7 @@
 export class EternalFlowApp {
     constructor() {
         this.config = {
-            APP_VERSION: '1.1.2',
+            APP_VERSION: '1.2.0',
             DB_NAME: 'EternalFlowDB',
             DB_VERSION: 3,
             TIME_UNITS: [
@@ -25,6 +25,7 @@ export class EternalFlowApp {
         this.searchQuery = '';
         this.db = null;
         this.visibleEvents = this.config.VISIBLE_EVENTS;
+        this.searchExpanded = false;
 
         this.init();
     }
@@ -57,191 +58,285 @@ export class EternalFlowApp {
     async initDB() {
         return new Promise((resolve, reject) => {
             const request = indexedDB.open(this.config.DB_NAME, this.config.DB_VERSION);
-
-            request.onupgradeneeded = (event) => {
-                const db = event.target.result;
-                const oldVersion = event.oldVersion;
-                
-                if (oldVersion < 1) {
-                    if (!db.objectStoreNames.contains('events')) {
-                        const store = db.createObjectStore('events', { keyPath: 'id' });
-                        store.createIndex('date', 'date', { unique: false });
-                        store.createIndex('title', 'title', { unique: false });
-                    }
-                    
-                    if (!db.objectStoreNames.contains('settings')) {
-                        db.createObjectStore('settings', { keyPath: 'name' });
-                    }
-                }
-                
-                if (oldVersion < 2) {
-                    const transaction = event.target.transaction;
-                    const eventsStore = transaction.objectStore('events');
-                    
-                    eventsStore.getAll().onsuccess = (e) => {
-                        const events = e.target.result || [];
-                        events.forEach(event => {
-                            if (!event.createdAt) {
-                                event.createdAt = new Date(parseInt(event.id)).toISOString();
-                                eventsStore.put(event);
-                            }
-                        });
-                    };
-                }
-                
-                if (oldVersion < 3) {
-                    const transaction = event.target.transaction;
-                    const eventsStore = transaction.objectStore('events');
-                    
-                    if (!eventsStore.indexNames.contains('createdAt')) {
-                        eventsStore.createIndex('createdAt', 'createdAt', { unique: false });
-                    }
-                }
-            };
-
-            request.onsuccess = (event) => {
-                this.db = event.target.result;
+            
+            request.onerror = () => reject(request.error);
+            request.onsuccess = () => {
+                this.db = request.result;
                 resolve();
             };
-
-            request.onerror = (event) => {
-                console.error('Database error:', event.target.error);
-                this.showNotification('Ошибка базы данных', 'error');
-                reject(event.target.error);
+            
+            request.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                
+                if (!db.objectStoreNames.contains('events')) {
+                    const store = db.createObjectStore('events', { 
+                        keyPath: 'id',
+                        autoIncrement: true 
+                    });
+                    store.createIndex('date', 'date', { unique: false });
+                }
+                
+                if (!db.objectStoreNames.contains('settings')) {
+                    const store = db.createObjectStore('settings', { keyPath: 'key' });
+                }
             };
         });
     }
 
     async loadEvents() {
-        if (!this.db) return;
-
         return new Promise((resolve, reject) => {
             const transaction = this.db.transaction(['events'], 'readonly');
             const store = transaction.objectStore('events');
             const request = store.getAll();
-
-            request.onsuccess = (event) => {
-                this.events = event.target.result || [];
-                resolve();
-            };
-
-            request.onerror = (event) => {
-                console.error('Error loading events:', event.target.error);
-                this.showNotification('Ошибка загрузки данных', 'error');
-                reject(event.target.error);
-            };
-        });
-    }
-
-    async saveEvent(event) {
-        if (!this.db) return;
-
-        return new Promise((resolve, reject) => {
-            const transaction = this.db.transaction(['events'], 'readwrite');
-            const store = transaction.objectStore('events');
-
-            if (!event.id && this.events.length >= this.config.MAX_EVENTS) {
-                this.showNotification(`Достигнут лимит событий (${this.config.MAX_EVENTS})`, 'error');
-                reject(new Error('Event limit reached'));
-                return;
-            }
-
-            const saveData = event.id ? 
-                event : 
-                {
-                    ...event,
-                    id: Date.now().toString(),
-                    createdAt: new Date().toISOString()
-                };
-
-            const request = store.put(saveData);
-
+            
+            request.onerror = () => reject(request.error);
             request.onsuccess = () => {
+                this.events = request.result || [];
                 resolve();
-            };
-
-            request.onerror = (event) => {
-                console.error('Error saving event:', event.target.error);
-                this.showNotification('Ошибка сохранения', 'error');
-                reject(event.target.error);
-            };
-        });
-    }
-
-    async deleteEvent(id) {
-        if (!this.db) return;
-
-        return new Promise((resolve, reject) => {
-            const transaction = this.db.transaction(['events'], 'readwrite');
-            const store = transaction.objectStore('events');
-            const request = store.delete(id);
-
-            request.onsuccess = () => {
-                resolve();
-            };
-
-            request.onerror = (event) => {
-                console.error('Error deleting event:', event.target.error);
-                this.showNotification('Ошибка удаления', 'error');
-                reject(event.target.error);
             };
         });
     }
 
     async loadSettings() {
-        if (!this.db) return;
-
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             const transaction = this.db.transaction(['settings'], 'readonly');
             const store = transaction.objectStore('settings');
-            const settingsToLoad = ['filter', 'sort'];
-
-            const requests = settingsToLoad.map(name => {
-                return new Promise(resolve => {
-                    const request = store.get(name);
-                    request.onsuccess = () => {
-                        if (request.result) {
-                            this[name] = request.result.value;
-                        }
-                        resolve();
-                    };
+            const request = store.getAll();
+            
+            request.onerror = () => reject(request.error);
+            request.onsuccess = () => {
+                const settings = request.result || [];
+                settings.forEach(setting => {
+                    if (setting.key === 'filter') this.filter = setting.value;
+                    if (setting.key === 'sort') this.sort = setting.value;
                 });
-            });
-
-            Promise.all(requests).then(() => {
+                
+                // Update UI elements
+                if (document.getElementById('filterSelect')) {
+                    document.getElementById('filterSelect').value = this.filter;
+                }
+                if (document.getElementById('sortSelect')) {
+                    document.getElementById('sortSelect').value = this.sort;
+                }
+                
                 resolve();
-            });
+            };
         });
     }
 
-    async saveSetting(name, value) {
-        if (!this.db) return;
-
+    async saveSetting(key, value) {
         return new Promise((resolve, reject) => {
             const transaction = this.db.transaction(['settings'], 'readwrite');
             const store = transaction.objectStore('settings');
-            const request = store.put({ name, value });
-
-            request.onsuccess = () => {
-                resolve();
-            };
-
-            request.onerror = (event) => {
-                console.error(`Error saving setting ${name}:`, event.target.error);
-                reject(event.target.error);
-            };
+            const request = store.put({ key, value });
+            
+            request.onerror = () => reject(request.error);
+            request.onsuccess = () => resolve();
         });
     }
 
-    applySettings() {
-        const filterSelect = document.getElementById('filterSelect');
-        if (filterSelect) filterSelect.value = this.filter;
+    createParticles() {
+        const particlesContainer = document.getElementById('particles');
+        if (!particlesContainer) return;
+        
+        for (let i = 0; i < 30; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.cssText = `
+                width: ${Math.random() * 3 + 1}px;
+                height: ${Math.random() * 3 + 1}px;
+                background: rgba(41, 182, 246, ${Math.random() * 0.3 + 0.1});
+                top: ${Math.random() * 100}vh;
+                left: ${Math.random() * 100}vw;
+                animation-duration: ${Math.random() * 20 + 10}s;
+                animation-delay: ${Math.random() * 5}s;
+            `;
+            particlesContainer.appendChild(particle);
+        }
+    }
 
-        const sortSelect = document.getElementById('sortSelect');
-        if (sortSelect) sortSelect.value = this.sort;
+    setupEventListeners() {
+        // Save event button
+        document.getElementById('saveEventBtn')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.saveEventForm();
+        });
 
-        const searchInput = document.getElementById('searchInput');
-        if (searchInput) searchInput.value = this.searchQuery;
+        // Title input enter key
+        document.getElementById('eventTitle')?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') this.saveEventForm();
+        });
+
+        // Action buttons
+        document.getElementById('importBtn')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.importEvents();
+        });
+        
+        document.getElementById('exportBtn')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.exportEvents();
+        });
+        
+        document.getElementById('clearBtn')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.showClearConfirmation();
+        });
+        
+        document.getElementById('openEventFormBtn')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.openEventModal();
+        });
+
+        // Filter and sort
+        document.getElementById('filterSelect')?.addEventListener('change', async (e) => {
+            this.filter = e.target.value;
+            await this.saveSetting('filter', this.filter);
+            this.visibleEvents = this.config.VISIBLE_EVENTS;
+            this.renderEvents();
+        });
+
+        document.getElementById('sortSelect')?.addEventListener('change', async (e) => {
+            this.sort = e.target.value;
+            await this.saveSetting('sort', this.sort);
+            this.visibleEvents = this.config.VISIBLE_EVENTS;
+            this.renderEvents();
+        });
+
+        // Search functionality
+        document.getElementById('searchInput')?.addEventListener('input', (e) => {
+            this.searchQuery = e.target.value.toLowerCase();
+            this.visibleEvents = this.config.VISIBLE_EVENTS;
+            this.renderEvents();
+        });
+
+        // Escape key handler
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('eventModal');
+                if (modal?.classList.contains('show')) {
+                    modal.classList.remove('show');
+                    this.editingEventId = null;
+                    this.resetForm();
+                }
+                
+                const filterModal = document.getElementById('filterModal');
+                if (filterModal?.classList.contains('show')) {
+                    filterModal.classList.remove('show');
+                }
+                
+                if (this.searchExpanded) {
+                    this.toggleSearch(false);
+                }
+            }
+        });
+        
+        // Search toggle
+        document.getElementById('searchToggle')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.toggleSearch(!this.searchExpanded);
+        });
+
+        // Close search
+        document.getElementById('closeSearch')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.toggleSearch(false);
+            this.searchQuery = '';
+            document.getElementById('searchInput').value = '';
+            this.renderEvents();
+        });
+
+        // Filter toggle
+        document.getElementById('filterToggle')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            document.getElementById('filterModal').classList.add('show');
+        });
+
+        // Close filter modal
+        document.getElementById('closeFilterModal')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            document.getElementById('filterModal').classList.remove('show');
+        });
+
+        // Modal click outside
+        document.getElementById('filterModal')?.addEventListener('click', (e) => {
+            if (e.target === document.getElementById('filterModal')) {
+                document.getElementById('filterModal').classList.remove('show');
+            }
+        });
+
+        // Close event modal
+        document.getElementById('closeEventModal')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            document.getElementById('eventModal').classList.remove('show');
+            this.editingEventId = null;
+            this.resetForm();
+        });
+
+        // Event modal click outside
+        document.getElementById('eventModal')?.addEventListener('click', (e) => {
+            if (e.target === document.getElementById('eventModal')) {
+                document.getElementById('eventModal').classList.remove('show');
+                this.editingEventId = null;
+                this.resetForm();
+            }
+        });
+    }
+
+    toggleSearch(state) {
+        this.searchExpanded = state;
+        const searchExpanded = document.getElementById('searchExpanded');
+        if (searchExpanded) {
+            searchExpanded.style.display = state ? 'block' : 'none';
+            
+            if (state) {
+                setTimeout(() => {
+                    document.getElementById('searchInput')?.focus();
+                }, 100);
+            }
+        }
+    }
+
+    setCurrentDateTime() {
+        const now = new Date();
+        const localDateTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+            .toISOString()
+            .slice(0, 16);
+        document.getElementById('eventDate').value = localDateTime;
+    }
+
+    setupServiceWorker() {
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./service-worker.js')
+                .then((registration) => {
+                    console.log('SW registered: ', registration);
+                })
+                .catch((registrationError) => {
+                    console.log('SW registration failed: ', registrationError);
+                });
+        }
+    }
+
+    setupInstallPrompt() {
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            this.deferredPrompt = e;
+            
+            const dynamicIsland = document.getElementById('dynamicIsland');
+            if (dynamicIsland) {
+                dynamicIsland.style.display = 'flex';
+                
+                dynamicIsland.addEventListener('click', () => {
+                    this.deferredPrompt.prompt();
+                    this.deferredPrompt.userChoice.then((choiceResult) => {
+                        if (choiceResult.outcome === 'accepted') {
+                            dynamicIsland.style.display = 'none';
+                        }
+                        this.deferredPrompt = null;
+                    });
+                });
+            }
+        });
     }
 
     setAppVersion() {
@@ -251,936 +346,627 @@ export class EternalFlowApp {
         });
     }
 
-    setupInstallPrompt() {
-        const handleInstallClick = async () => {
-            if (!this.deferredPrompt) return;
-
-            try {
-                this.deferredPrompt.prompt();
-                const { outcome } = await this.deferredPrompt.userChoice;
-                if (outcome === 'accepted') {
-                    this.showNotification('Приложение установлено!', 'success');
-                }
-            } catch (error) {
-                console.error('Ошибка установки:', error);
-                this.showNotification('Ошибка установки', 'error');
-            } finally {
-                this.deferredPrompt = null;
-                const island = document.getElementById('dynamicIsland');
-                if (island) island.style.display = 'none';
-            }
-        };
-
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            this.deferredPrompt = e;
-            const island = document.getElementById('dynamicIsland');
-            if (island) {
-                island.style.display = 'flex';
-                island.addEventListener('click', handleInstallClick);
-            }
-        });
-    }
-
-    createParticles() {
-        const container = document.getElementById('particles');
-        if (!container) return;
-
-        const colors = ['#29B6F6', '#7E57C2', '#BBDEFB', '#1565C0', '#1A237E'];
-        const particleCount = window.innerWidth < 768 ? 10 : 15;
-
-        for (let i = 0; i < particleCount; i++) {
-            const particle = document.createElement('div');
-            particle.classList.add('particle');
-
-            const size = Math.random() * 3 + 1;
-            const posX = Math.random() * 100;
-            const posY = Math.random() * 100;
-            const duration = Math.random() * 10 + 10;
-            const delay = Math.random() * 5;
-
-            particle.style.cssText = `
-                width: ${size}px;
-                height: ${size}px;
-                left: ${posX}%;
-                top: ${posY}%;
-                background: ${colors[Math.floor(Math.random() * colors.length)]};
-                opacity: ${Math.random() * 0.15 + 0.05};
-                animation-duration: ${duration}s;
-                animation-delay: ${delay}s;
-                border-radius: 50%;
-            `;
-
-            container.appendChild(particle);
-        }
-    }
-
-    setCurrentDateTime() {
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-
-        const eventDateInput = document.getElementById('eventDate');
-        if (eventDateInput) {
-            eventDateInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
-            eventDateInput.min = `${year}-${month}-${day}T${hours}:${minutes}`;
-        }
-    }
-
-    setupEventListeners() {
-        const saveBtn = document.getElementById('saveEventBtn');
-        if (saveBtn) {
-            saveBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.saveEventForm();
-            });
-        }
-
-        const titleInput = document.getElementById('eventTitle');
-        if (titleInput) {
-            titleInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') this.saveEventForm();
-            });
-        }
-
-        const importBtn = document.getElementById('importBtn');
-        const exportBtn = document.getElementById('exportBtn');
-        const clearBtn = document.getElementById('clearBtn');
-        const openBtn = document.getElementById('openEventFormBtn');
-
-        if (importBtn) importBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            this.importEvents();
-        });
-        if (exportBtn) exportBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            this.exportEvents();
-        });
-        if (clearBtn) clearBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            this.showClearConfirmation();
-        });
-        if (openBtn) openBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            this.openEventModal();
-        });
-
-        const filterSelect = document.getElementById('filterSelect');
-        if (filterSelect) {
-            filterSelect.addEventListener('change', async (e) => {
-                this.filter = e.target.value;
-                await this.saveSetting('filter', this.filter);
-                this.visibleEvents = this.config.VISIBLE_EVENTS;
-                this.renderEvents();
-            });
-        }
-
-        const sortSelect = document.getElementById('sortSelect');
-        if (sortSelect) {
-            sortSelect.addEventListener('change', async (e) => {
-                this.sort = e.target.value;
-                await this.saveSetting('sort', this.sort);
-                this.visibleEvents = this.config.VISIBLE_EVENTS;
-                this.renderEvents();
-            });
-        }
-
-        const searchInput = document.getElementById('searchInput');
-        if (searchInput) {
-            searchInput.addEventListener('input', (e) => {
-                this.searchQuery = e.target.value.toLowerCase();
-                this.visibleEvents = this.config.VISIBLE_EVENTS;
-                this.renderEvents();
-            });
-        }
-
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                const modal = document.getElementById('eventModal');
-                if (modal && modal.classList.contains('show')) {
-                    modal.classList.remove('show');
-                    this.editingEventId = null;
-                    this.resetForm();
-                }
-                
-                const filterModal = document.getElementById('filterModal');
-                if (filterModal && filterModal.classList.contains('show')) {
-                    filterModal.classList.remove('show');
-                }
-                
-                if (this.searchExpanded) {
-                    this.searchExpanded = false;
-                    const searchExpanded = document.getElementById('searchExpanded');
-                    if (searchExpanded) searchExpanded.style.display = 'none';
-                }
-            }
-        });
-        
-        const searchToggle = document.getElementById('searchToggle');
-        const searchExpanded = document.getElementById('searchExpanded');
-        const closeSearch = document.getElementById('closeSearch');
-
-        if (searchToggle && searchExpanded) {
-            searchToggle.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.searchExpanded = !this.searchExpanded;
-                searchExpanded.style.display = this.searchExpanded ? 'block' : 'none';
-                
-                if (this.searchExpanded) {
-                    setTimeout(() => {
-                        const searchInput = document.getElementById('searchInput');
-                        if (searchInput) searchInput.focus();
-                    }, 100);
-                }
-            });
-        }
-
-        if (closeSearch) {
-            closeSearch.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.searchExpanded = false;
-                if (searchExpanded) searchExpanded.style.display = 'none';
-                this.searchQuery = '';
-                const searchInput = document.getElementById('searchInput');
-                if (searchInput) searchInput.value = '';
-                this.renderEvents();
-            });
-        }
-
-        const filterToggle = document.getElementById('filterToggle');
-        const filterModal = document.getElementById('filterModal');
-        const closeFilterModal = document.getElementById('closeFilterModal');
-
-        if (filterToggle && filterModal) {
-            filterToggle.addEventListener('click', (e) => {
-                e.preventDefault();
-                filterModal.classList.add('show');
-            });
-        }
-
-        if (closeFilterModal) {
-            closeFilterModal.addEventListener('click', (e) => {
-                e.preventDefault();
-                filterModal.classList.remove('show');
-            });
-        }
-
-        if (filterModal) {
-            filterModal.addEventListener('click', (e) => {
-                if (e.target === filterModal) {
-                    filterModal.classList.remove('show');
-                }
-            });
-        }
+    setupModal() {
+        // Already handled in setupEventListeners
     }
 
     setupScrollHide() {
-        const headerControls = document.querySelector('.app-header');
-        if (!headerControls) return;
-        
         let lastScrollTop = 0;
-        let scrollTimeout = null;
+        const header = document.querySelector('.app-header');
         
         window.addEventListener('scroll', () => {
-            const currentScroll = window.pageYOffset || document.documentElement.scrollTop;
-            const scrollingDown = currentScroll > lastScrollTop;
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
             
-            if (currentScroll > 50) {
-                headerControls.classList.remove('hidden');
-            }
-            
-            if (scrollingDown && currentScroll > 100) {
-                headerControls.classList.add('hidden');
+            if (scrollTop > lastScrollTop && scrollTop > 100) {
+                header.style.transform = 'translateY(-100%)';
+                header.style.opacity = '0';
             } else {
-                headerControls.classList.remove('hidden');
+                header.style.transform = 'translateY(0)';
+                header.style.opacity = '1';
             }
             
-            lastScrollTop = currentScroll;
-            
-            clearTimeout(scrollTimeout);
-            scrollTimeout = setTimeout(() => {
-                if (currentScroll > 100) {
-                    headerControls.classList.add('hidden');
-                }
-            }, 3000);
-        });
+            lastScrollTop = scrollTop;
+        }, { passive: true });
     }
 
     setupInfiniteScroll() {
-        const container = document.getElementById('eventsContainer');
-        if (!container) return;
-
-        container.addEventListener('scroll', () => {
-            const { scrollTop, scrollHeight, clientHeight } = container;
+        const eventsContainer = document.getElementById('eventsContainer');
+        if (!eventsContainer) return;
+        
+        eventsContainer.addEventListener('scroll', () => {
+            const { scrollTop, scrollHeight, clientHeight } = eventsContainer;
+            
             if (scrollTop + clientHeight >= scrollHeight - 100) {
                 this.visibleEvents += this.config.VISIBLE_EVENTS;
                 this.renderEvents();
             }
-        });
+        }, { passive: true });
     }
 
     setupNetworkStatus() {
-        window.addEventListener('offline', () => {
-            this.showNotification('Вы в автономном режиме', 'info');
-        });
-
         window.addEventListener('online', () => {
             this.showNotification('Соединение восстановлено', 'success');
         });
+
+        window.addEventListener('offline', () => {
+            this.showNotification('Отсутствует интернет-соединение', 'error');
+        });
     }
 
-    openEventModal() {
+    openEventModal(event = null) {
         const modal = document.getElementById('eventModal');
         const modalTitle = document.getElementById('modalTitle');
-        const saveBtn = document.getElementById('saveEventBtn');
         
-        if (modal && modalTitle && saveBtn) {
+        if (event) {
+            // Editing existing event
+            modalTitle.textContent = 'Редактировать событие';
+            this.editingEventId = event.id;
+            document.getElementById('eventTitle').value = event.title;
+            document.getElementById('eventDate').value = new Date(event.date).toISOString().slice(0, 16);
+        } else {
+            // Creating new event
+            modalTitle.textContent = 'Новое событие';
+            this.editingEventId = null;
             this.resetForm();
-            modalTitle.textContent = 'Добавить новое событие';
-            saveBtn.innerHTML = `
-                <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
-                    <path fill="white" d="M17,3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V7L17,3M19,19H5V5H16.17L19,7.83V19M12,12A4,4 0 0,0 8,16A4,4 0 0,0 12,20A4,4 0 0,0 16,16A4,4 0 0,0 12,12Z" />
-                </svg>
-                Сохранить событие
-            `;
-            modal.classList.add('show');
-            setTimeout(() => {
-                const titleInput = document.getElementById('eventTitle');
-                if (titleInput) titleInput.focus();
-            }, 100);
         }
-    }
-
-    setupModal() {
-        const closeBtn = document.getElementById('closeEventModal');
-        const modal = document.getElementById('eventModal');
-
-        if (closeBtn && modal) {
-            closeBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                modal.classList.remove('show');
-                setTimeout(() => {
-                    this.editingEventId = null;
-                    this.resetForm();
-                }, 300);
-            });
-        }
-
-        if (modal) {
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    modal.classList.remove('show');
-                    setTimeout(() => {
-                        this.editingEventId = null;
-                        this.resetForm();
-                    }, 300);
-                }
-            });
-        }
+        
+        modal.classList.add('show');
+        document.getElementById('eventTitle').focus();
     }
 
     resetForm() {
-        const titleInput = document.getElementById('eventTitle');
-        if (titleInput) titleInput.value = '';
+        document.getElementById('eventTitle').value = '';
         this.setCurrentDateTime();
-        this.editingEventId = null;
     }
 
     async saveEventForm() {
         const titleInput = document.getElementById('eventTitle');
         const dateInput = document.getElementById('eventDate');
-        const modal = document.getElementById('eventModal');
-
-        const title = (titleInput?.value || '').trim();
-        const dateTime = dateInput?.value;
-
+        
+        const title = titleInput.value.trim();
+        const date = new Date(dateInput.value).getTime();
+        
         if (!title) {
             this.showNotification('Введите название события', 'error');
-            if (titleInput) titleInput.focus();
+            titleInput.focus();
             return;
         }
-
-        if (!dateTime) {
-            this.showNotification('Укажите дату и время события', 'error');
-            if (dateInput) dateInput.focus();
+        
+        if (!date || isNaN(date)) {
+            this.showNotification('Укажите корректную дату и время', 'error');
+            dateInput.focus();
             return;
         }
-
-        const targetDate = new Date(dateTime);
-        if (isNaN(targetDate.getTime())) {
-            this.showNotification('Недопустимый формат даты и времени', 'error');
-            return;
-        }
-
+        
         try {
             if (this.editingEventId) {
-                const event = this.events.find(e => e.id === this.editingEventId);
-                if (event) {
-                    event.title = title;
-                    event.date = targetDate.toISOString();
-                    await this.saveEvent(event);
-                    this.showNotification('Событие обновлено', 'success');
-                }
+                // Update existing event
+                await this.updateEvent(this.editingEventId, { title, date });
+                this.showNotification('Событие обновлено', 'success');
             } else {
-                await this.saveEvent({
-                    title,
-                    date: targetDate.toISOString()
-                });
+                // Create new event
+                await this.addEvent({ title, date });
                 this.showNotification('Событие добавлено', 'success');
             }
-
-            this.visibleEvents = this.config.VISIBLE_EVENTS;
-            await this.loadEvents();
-            if (modal) modal.classList.remove('show');
+            
+            document.getElementById('eventModal').classList.remove('show');
+            this.editingEventId = null;
             this.resetForm();
-
+            this.renderEvents();
         } catch (error) {
             console.error('Error saving event:', error);
-            this.showNotification('Ошибка сохранения', 'error');
+            this.showNotification('Ошибка сохранения события', 'error');
         }
     }
 
-    editEvent(eventId) {
-        const event = this.events.find(e => e.id === eventId);
-        if (!event) return;
-
-        const titleInput = document.getElementById('eventTitle');
-        const dateInput = document.getElementById('eventDate');
-        const saveBtn = document.getElementById('saveEventBtn');
-        const modal = document.getElementById('eventModal');
-        const modalTitle = document.getElementById('modalTitle');
-
-        if (titleInput && dateInput && saveBtn && modal && modalTitle) {
-            this.editingEventId = eventId;
-            titleInput.value = event.title;
-            modalTitle.textContent = 'Редактировать событие';
-
-            const date = new Date(event.date);
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            const hours = String(date.getHours()).padStart(2, '0');
-            const minutes = String(date.getMinutes()).padStart(2, '0');
-            dateInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
-
-            saveBtn.innerHTML = `
-                <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
-                    <path fill="white" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L17.59,5.59L19,8L10,17Z"/>
-                </svg>
-                Сохранить изменения
-            `;
-
-            modal.classList.add('show');
-            setTimeout(() => {
-                if (titleInput) {
-                    titleInput.focus();
-                    titleInput.select();
-                }
-            }, 100);
-        }
-    }
-
-    showDeleteConfirmation(eventId) {
-        const modal = document.createElement('div');
-        modal.className = 'confirmation-modal';
-        modal.innerHTML = `
-            <div class="modal-content">
-                <p>Удалить это событие навсегда?</p>
-                <div class="modal-buttons">
-                    <button id="confirmDelete" class="btn danger">Удалить</button>
-                    <button id="cancelDelete" class="btn">Отмена</button>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-        setTimeout(() => modal.classList.add('show'), 10);
-
-        document.getElementById('confirmDelete').addEventListener('click', async () => {
-            try {
-                await this.deleteEvent(eventId);
-                this.visibleEvents = this.config.VISIBLE_EVENTS;
-                await this.loadEvents();
-                this.showNotification('Событие удалено', 'success');
-            } catch (error) {
-                console.error('Error deleting event:', error);
-                this.showNotification('Ошибка удаления', 'error');
-            } finally {
-                modal.classList.remove('show');
-                setTimeout(() => modal.remove(), 300);
-            }
+    async addEvent(eventData) {
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(['events'], 'readwrite');
+            const store = transaction.objectStore('events');
+            
+            const event = {
+                ...eventData,
+                createdAt: Date.now()
+            };
+            
+            const request = store.add(event);
+            
+            request.onerror = () => reject(request.error);
+            request.onsuccess = () => {
+                this.events.push({ ...event, id: request.result });
+                resolve();
+            };
         });
+    }
 
-        document.getElementById('cancelDelete').addEventListener('click', () => {
-            modal.classList.remove('show');
-            setTimeout(() => modal.remove(), 300);
+    async updateEvent(id, updates) {
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(['events'], 'readwrite');
+            const store = transaction.objectStore('events');
+            
+            const getRequest = store.get(id);
+            getRequest.onerror = () => reject(getRequest.error);
+            getRequest.onsuccess = () => {
+                const event = getRequest.result;
+                if (!event) {
+                    reject(new Error('Event not found'));
+                    return;
+                }
+                
+                const updatedEvent = { ...event, ...updates };
+                const putRequest = store.put(updatedEvent);
+                
+                putRequest.onerror = () => reject(putRequest.error);
+                putRequest.onsuccess = () => {
+                    const index = this.events.findIndex(e => e.id === id);
+                    if (index !== -1) {
+                        this.events[index] = updatedEvent;
+                    }
+                    resolve();
+                };
+            };
+        });
+    }
+
+    async deleteEvent(id) {
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(['events'], 'readwrite');
+            const store = transaction.objectStore('events');
+            
+            const request = store.delete(id);
+            
+            request.onerror = () => reject(request.error);
+            request.onsuccess = () => {
+                this.events = this.events.filter(event => event.id !== id);
+                resolve();
+            };
+        });
+    }
+
+    async clearAllEvents() {
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(['events'], 'readwrite');
+            const store = transaction.objectStore('events');
+            
+            const request = store.clear();
+            
+            request.onerror = () => reject(request.error);
+            request.onsuccess = () => {
+                this.events = [];
+                resolve();
+            };
         });
     }
 
     showClearConfirmation() {
-        if (this.events.length === 0) {
-            this.showNotification('Нет событий для очистки', 'info');
-            return;
-        }
-
         const modal = document.createElement('div');
         modal.className = 'confirmation-modal';
         modal.innerHTML = `
             <div class="modal-content">
-                <p>Удалить ВСЕ события безвозвратно?</p>
+                <h3>Очистить все события?</h3>
+                <p>Это действие нельзя отменить. Все ваши события будут удалены.</p>
                 <div class="modal-buttons">
-                    <button id="confirmClear" class="btn danger">Удалить всё</button>
-                    <button id="cancelClear" class="btn">Отмена</button>
+                    <button class="btn danger" id="confirmClear">Очистить</button>
+                    <button class="btn" id="cancelClear">Отмена</button>
                 </div>
             </div>
         `;
-
+        
         document.body.appendChild(modal);
-        setTimeout(() => modal.classList.add('show'), 10);
-
+        
+        setTimeout(() => {
+            modal.classList.add('show');
+        }, 10);
+        
         document.getElementById('confirmClear').addEventListener('click', async () => {
             try {
-                const transaction = this.db.transaction(['events'], 'readwrite');
-                const store = transaction.objectStore('events');
-                store.clear();
-
-                transaction.oncomplete = async () => {
-                    this.events = [];
-                    this.visibleEvents = this.config.VISIBLE_EVENTS;
-                    this.renderEvents();
-                    this.showNotification('Все события удалены', 'success');
-                };
+                await this.clearAllEvents();
+                this.showNotification('Все события удалены', 'success');
+                this.renderEvents();
             } catch (error) {
                 console.error('Error clearing events:', error);
-                this.showNotification('Ошибка очистки', 'error');
-            } finally {
-                modal.classList.remove('show');
-                setTimeout(() => modal.remove(), 300);
+                this.showNotification('Ошибка удаления событий', 'error');
             }
+            modal.remove();
         });
-
+        
         document.getElementById('cancelClear').addEventListener('click', () => {
-            modal.classList.remove('show');
-            setTimeout(() => modal.remove(), 300);
+            modal.remove();
         });
-    }
-
-    getFilteredEvents() {
-        const now = new Date();
-        let filteredEvents = [...this.events];
-
-        if (this.filter === 'upcoming') {
-            filteredEvents = filteredEvents.filter(e => new Date(e.date) > now);
-        } else if (this.filter === 'past') {
-            filteredEvents = filteredEvents.filter(e => new Date(e.date) <= now);
-        }
-
-        if (this.searchQuery) {
-            filteredEvents = filteredEvents.filter(e =>
-                e.title.toLowerCase().includes(this.searchQuery)
-            );
-        }
-
-        filteredEvents.sort((a, b) => {
-            const dateA = new Date(a.date);
-            const dateB = new Date(b.date);
-
-            switch (this.sort) {
-                case 'date-asc': return dateA - dateB;
-                case 'date-desc': return dateB - dateA;
-                case 'title-asc': return a.title.localeCompare(b.title);
-                case 'title-desc': return b.title.localeCompare(a.title);
-                case 'added-asc':
-                    return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
-                case 'added-desc':
-                    return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
-                default: return dateA - dateB;
+        
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
             }
         });
-
-        return filteredEvents;
     }
 
     renderEvents() {
         const container = document.getElementById('eventsContainer');
         if (!container) return;
-
-        // Очищаем контейнер
-        while (container.firstChild) {
-            container.removeChild(container.firstChild);
-        }
-
-        const filteredEvents = this.getFilteredEvents();
-        const eventsToRender = filteredEvents.slice(0, this.visibleEvents);
-
-        if (eventsToRender.length === 0) {
-            const emptyState = document.createElement('div');
-            emptyState.className = 'empty-state';
-            emptyState.setAttribute('aria-label', 'Нет событий');
-            emptyState.innerHTML = `
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#36bff1" d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
-                <p>Событий пока нет</p>
-                ${this.searchQuery || this.filter !== 'all' ? '<p>Измените фильтры или запрос</p>' : '<p>Добавьте первое событие</p>'}
+        
+        // Filter events
+        let filteredEvents = this.events.filter(event => {
+            const matchesSearch = event.title.toLowerCase().includes(this.searchQuery);
+            const isFuture = event.date > Date.now();
+            
+            if (this.filter === 'upcoming') return matchesSearch && isFuture;
+            if (this.filter === 'past') return matchesSearch && !isFuture;
+            return matchesSearch;
+        });
+        
+        // Sort events
+        filteredEvents.sort((a, b) => {
+            switch (this.sort) {
+                case 'date-desc':
+                    return b.date - a.date;
+                case 'title-asc':
+                    return a.title.localeCompare(b.title);
+                case 'title-desc':
+                    return b.title.localeCompare(a.title);
+                case 'added-asc':
+                    return a.createdAt - b.createdAt;
+                case 'added-desc':
+                    return b.createdAt - a.createdAt;
+                default: // date-asc
+                    return a.date - b.date;
+            }
+        });
+        
+        // Limit visible events
+        const eventsToShow = filteredEvents.slice(0, this.visibleEvents);
+        
+        if (eventsToShow.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path fill="currentColor" d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6Z" />
+                    </svg>
+                    <p>${this.searchQuery ? 'События не найдены' : 'Событий пока нет'}</p>
+                    <p>${this.searchQuery ? 'Попробуйте изменить поисковый запрос' : 'Добавьте первое событие'}</p>
+                </div>
             `;
-            container.appendChild(emptyState);
             return;
         }
-
-        const fragment = document.createDocumentFragment();
         
-        eventsToRender.forEach(event => {
-            const card = document.createElement('div');
-            card.className = 'event-card';
-            card.dataset.id = event.id;
-            card.setAttribute('aria-label', `Событие: ${event.title}`);
-
-            const header = document.createElement('div');
-            header.className = 'event-header';
-
-            const titleDiv = document.createElement('div');
-            titleDiv.className = 'event-title';
-
-            const now = new Date();
-            const eventDate = new Date(event.date);
-            const isPast = eventDate <= now;
-
-            const statusIcon = document.createElement('svg');
-            statusIcon.className = `status-icon ${isPast ? 'status-past' : 'status-future'}`;
-            statusIcon.setAttribute('viewBox', '0 0 24 24');
-            statusIcon.setAttribute('aria-hidden', 'true');
-
-            if (isPast) {
-                statusIcon.innerHTML = `<path d="M12 2C6.5 2 2 6.5 2 12C2 17.5 6.5 22 12 22C17.5 22 22 17.5 22 12C22 6.5 17.5 2 12 2M10 17L5 12L6.41 10.59L10 14.17L17.59 6.58L19 8L10 17Z"/>`;
-            } else {
-                statusIcon.innerHTML = `<path d="M12 20C16.42 20 20 16.42 20 12C20 7.58 16.42 4 12 4C7.58 4 4 7.58 4 12C4 16.42 7.58 20 12 20M12 2C17.52 2 22 6.48 22 12C22 17.52 17.52 22 12 22C6.48 22 2 17.52 2 12C2 6.48 6.48 2 12 2M12.5 7V12.25L17 14.92L16.25 16.15L11 13V7H12.5Z"/>`;
+        container.innerHTML = eventsToShow.map(event => this.createEventCard(event)).join('');
+        
+        // Add event listeners to action buttons
+        eventsToShow.forEach(event => {
+            const editBtn = document.getElementById(`edit-${event.id}`);
+            const deleteBtn = document.getElementById(`delete-${event.id}`);
+            
+            if (editBtn) {
+                editBtn.addEventListener('click', () => this.openEventModal(event));
             }
-
-            const titleText = document.createElement('span');
-            titleText.className = 'event-title-text';
-            titleText.textContent = this.escapeHTML(event.title);
-            titleText.title = event.title;
-
-            titleDiv.appendChild(statusIcon);
-            titleDiv.appendChild(titleText);
-
-            const dateDiv = document.createElement('div');
-            dateDiv.className = 'event-date';
-            dateDiv.setAttribute('aria-label', 'Дата события');
-            dateDiv.title = this.formatFullDate(new Date(event.date));
-            dateDiv.innerHTML = `
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" fill="#29B6F6"/></svg>
-                ${this.formatDate(new Date(event.date))}
-            `;
-
-            header.appendChild(titleDiv);
-            header.appendChild(dateDiv);
-
-            const timerContainer = document.createElement('div');
-            timerContainer.className = 'time-grid';
-            timerContainer.id = `timer-${event.id}`;
-            timerContainer.setAttribute('aria-live', 'polite');
-
-            const actionsDiv = document.createElement('div');
-            actionsDiv.className = 'event-actions';
-
-            const editBtn = document.createElement('button');
-            editBtn.className = 'edit-btn';
-            editBtn.setAttribute('aria-label', `Редактировать событие: ${event.title}`);
-            editBtn.innerHTML = `
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z" fill="#29B6F6"/>
-                </svg>
-            `;
-            editBtn.addEventListener('click', () => this.editEvent(event.id));
-
-            const deleteBtn = document.createElement('button');
-            deleteBtn.className = 'delete-btn';
-            deleteBtn.setAttribute('aria-label', `Удалить событие: ${event.title}`);
-            deleteBtn.innerHTML = `
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z" fill="#ff6b6b"/>
-                </svg>
-            `;
-            deleteBtn.addEventListener('click', () => this.showDeleteConfirmation(event.id));
-
-            actionsDiv.appendChild(editBtn);
-            actionsDiv.appendChild(deleteBtn);
-
-            card.appendChild(header);
-            card.appendChild(timerContainer);
-            card.appendChild(actionsDiv);
-
-            fragment.appendChild(card);
-            this.updateTimer(event.id);
+            
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', () => this.deleteEventWithConfirmation(event.id));
+            }
         });
+    }
 
-        container.appendChild(fragment);
+    createEventCard(event) {
+        const isFuture = event.date > Date.now();
+        const timeDiff = Math.abs(event.date - Date.now());
+        const timeUnits = this.calculateTimeUnits(timeDiff);
+        
+        return `
+            <div class="event-card" data-id="${event.id}">
+                <div class="event-header">
+                    <div class="event-title">
+                        <svg class="status-icon ${isFuture ? 'status-future' : 'status-past'}" viewBox="0 0 24 24" aria-hidden="true">
+                            <path fill="currentColor" d="${isFuture ? 'M11,4V8H4V4H11M12,4H21V8H12V4M12,9H21V13H12V9M12,14H21V18H12V14M4,11H11V21H4V11Z' : 'M10,4H14V6H10V4M10,8H14V10H10V8M10,12H14V20H10V12M16,4H20V6H16V4M16,8H20V10H16V8M16,12H20V20H16V12M4,4H8V20H4V4Z'}" />
+                        </svg>
+                        <span class="event-title-text" title="${event.title}">${event.title}</span>
+                    </div>
+                    <div class="event-date">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path fill="currentColor" d="M19,19H5V8H19M16,1V3H8V1H6V3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3H18V1M17,12H12V17H17V12Z" />
+                        </svg>
+                        ${new Date(event.date).toLocaleDateString('ru-RU')}
+                    </div>
+                </div>
+                
+                <div class="time-grid">
+                    ${Object.entries(timeUnits).map(([unit, value]) => `
+                        <div class="time-unit">
+                            <div class="time-value">${value}</div>
+                            <div class="time-label">${this.getUnitLabel(value, unit)}</div>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <div class="event-status">
+                    <div class="status-text ${isFuture ? 'future' : 'past'}">
+                        ${isFuture ? 'До события осталось' : 'Событие прошло'}
+                    </div>
+                </div>
+                
+                <div class="event-actions">
+                    <button id="edit-${event.id}" class="edit-btn" aria-label="Редактировать событие">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path fill="currentColor" d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z" />
+                        </svg>
+                    </button>
+                    <button id="delete-${event.id}" class="delete-btn" aria-label="Удалить событие">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path fill="currentColor" d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    calculateTimeUnits(milliseconds) {
+        const units = {};
+        
+        this.config.TIME_UNITS.forEach(unit => {
+            const value = Math.floor(milliseconds / unit.divisor);
+            milliseconds %= unit.divisor;
+            units[unit.name] = value;
+        });
+        
+        return units;
+    }
+
+    getUnitLabel(value, unitName) {
+        const unit = this.config.TIME_UNITS.find(u => u.name === unitName);
+        if (!unit) return unitName;
+        
+        const cases = [2, 0, 1, 1, 1, 2];
+        const index = (value % 100 > 4 && value % 100 < 20) ? 
+            2 : cases[Math.min(value % 10, 5)];
+        
+        return unit.labels[index];
+    }
+
+    deleteEventWithConfirmation(id) {
+        const event = this.events.find(e => e.id === id);
+        if (!event) return;
+        
+        const modal = document.createElement('div');
+        modal.className = 'confirmation-modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <h3>Удалить событие?</h3>
+                <p>Событие "${event.title}" будет удалено безвозвратно.</p>
+                <div class="modal-buttons">
+                    <button class="btn danger" id="confirmDelete">Удалить</button>
+                    <button class="btn" id="cancelDelete">Отмена</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        setTimeout(() => {
+            modal.classList.add('show');
+        }, 10);
+        
+        document.getElementById('confirmDelete').addEventListener('click', async () => {
+            try {
+                await this.deleteEvent(id);
+                this.showNotification('Событие удалено', 'success');
+                this.renderEvents();
+            } catch (error) {
+                console.error('Error deleting event:', error);
+                this.showNotification('Ошибка удаления события', 'error');
+            }
+            modal.remove();
+        });
+        
+        document.getElementById('cancelDelete').addEventListener('click', () => {
+            modal.remove();
+        });
+        
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
     }
 
     startTimers() {
+        // Clear existing interval if any
         if (this.timerUpdateInterval) {
             clearInterval(this.timerUpdateInterval);
         }
-
+        
+        // Update timers every second
         this.timerUpdateInterval = setInterval(() => {
             this.updateAllTimers();
         }, 1000);
     }
 
     updateAllTimers() {
-        const now = Date.now();
-        this.events.forEach(event => {
-            this.updateTimer(event.id, now);
+        const eventCards = document.querySelectorAll('.event-card');
+        
+        eventCards.forEach(card => {
+            const id = parseInt(card.dataset.id);
+            const event = this.events.find(e => e.id === id);
+            
+            if (!event) return;
+            
+            const isFuture = event.date > Date.now();
+            const timeDiff = Math.abs(event.date - Date.now());
+            const timeUnits = this.calculateTimeUnits(timeDiff);
+            
+            // Update time values
+            Object.entries(timeUnits).forEach(([unit, value]) => {
+                const valueElement = card.querySelector(`.time-unit .time-value`);
+                const labelElement = card.querySelector(`.time-unit .time-label`);
+                
+                if (valueElement && labelElement) {
+                    valueElement.textContent = value;
+                    labelElement.textContent = this.getUnitLabel(value, unit);
+                }
+            });
+            
+            // Update status text
+            const statusElement = card.querySelector('.status-text');
+            if (statusElement) {
+                statusElement.textContent = isFuture ? 'До события осталось' : 'Событие прошло';
+                statusElement.className = `status-text ${isFuture ? 'future' : 'past'}`;
+            }
         });
-    }
-
-    updateTimer(eventId, now = Date.now()) {
-        const container = document.getElementById(`timer-${eventId}`);
-        if (!container) return;
-
-        const event = this.events.find(e => e.id === eventId);
-        if (!event) return;
-
-        const targetDate = new Date(event.date).getTime();
-        const diff = targetDate - now;
-        const isPast = diff < 0;
-        const absDiff = Math.abs(diff);
-
-        const timeValues = {};
-        let remaining = absDiff;
-
-        for (const unit of this.config.TIME_UNITS) {
-            const value = Math.floor(remaining / unit.divisor);
-            timeValues[unit.name] = value;
-            remaining -= value * unit.divisor;
-        }
-
-        let hasNonZero = false;
-        const timerFrag = document.createDocumentFragment();
-
-        for (const unit of this.config.TIME_UNITS) {
-            const value = timeValues[unit.name];
-            if (value > 0 || hasNonZero) {
-                hasNonZero = true;
-                const label = this.getCorrectLabel(value, unit.labels);
-
-                const unitDiv = document.createElement('div');
-                unitDiv.className = 'time-unit';
-                unitDiv.setAttribute('aria-label', `${value} ${label}`);
-                unitDiv.innerHTML = `
-                    <div class="time-value">${value}</div>
-                    <div class="time-label">${label}</div>
-                `;
-                timerFrag.appendChild(unitDiv);
-            }
-        }
-
-        container.innerHTML = '';
-
-        if (!timerFrag.hasChildNodes()) {
-            const unitDiv = document.createElement('div');
-            unitDiv.className = 'time-unit';
-            unitDiv.innerHTML = `
-                <div class="time-value">0</div>
-                <div class="time-label">Сейчас</div>
-            `;
-            timerFrag.appendChild(unitDiv);
-        }
-
-        container.appendChild(timerFrag);
-    }
-
-    getCorrectLabel(value, labels) {
-        if (value % 10 === 1 && value % 100 !== 11) return labels[2];
-        if (value % 10 >= 2 && value % 10 <= 4 && (value % 100 < 10 || value % 100 >= 20))
-            return labels[1];
-        return labels[0];
-    }
-
-    formatDate(date) {
-        return date.toLocaleString('ru-RU', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false
-        });
-    }
-
-    formatFullDate(date) {
-        return date.toLocaleString('ru-RU', {
-            weekday: 'long',
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false
-        });
-    }
-
-    async exportEvents() {
-        try {
-            if (this.events.length === 0) {
-                this.showNotification('Нет событий для экспорта', 'info');
-                return;
-            }
-
-            const data = {
-                version: this.config.APP_VERSION,
-                timestamp: new Date().toISOString(),
-                events: this.events
-            };
-
-            const dataStr = JSON.stringify(data, null, 2);
-            const blob = new Blob([dataStr], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-
-            const exportFileDefaultName = `EternalFlow_${new Date().toISOString().slice(0, 10)}.json`;
-
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = exportFileDefaultName;
-            link.style.display = 'none';
-
-            document.body.appendChild(link);
-            link.click();
-
-            setTimeout(() => {
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
-                this.showNotification('События экспортированы', 'success');
-            }, 100);
-
-        } catch (error) {
-            console.error('Ошибка экспорта:', error);
-            this.showNotification('Ошибка экспорта данных', 'error');
-        }
-    }
-
-    async importEvents() {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.json';
-        input.style.display = 'none';
-
-        input.onchange = async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            try {
-                const reader = new FileReader();
-                const fileContent = await new Promise((resolve, reject) => {
-                    reader.onload = (event) => resolve(event.target.result);
-                    reader.onerror = () => reject(new Error('Ошибка чтения файла'));
-                    reader.readAsText(file);
-                });
-
-                const data = JSON.parse(fileContent);
-                if (!data.events || !Array.isArray(data.events)) {
-                    throw new Error('Неверный формат файла');
-                }
-
-                const validEvents = data.events.filter(ev =>
-                    ev.id && typeof ev.id === 'string' &&
-                    ev.title && typeof ev.title === 'string' &&
-                    ev.title.length <= 50 &&
-                    ev.date && !isNaN(new Date(ev.date).getTime())
-                );
-
-                if (validEvents.length === 0) {
-                    this.showNotification('Нет допустимых событий в файле', 'error');
-                    return;
-                }
-
-                if (this.events.length + validEvents.length > this.config.MAX_EVENTS) {
-                    this.showNotification(`Превышен лимит событий. Доступно ${this.config.MAX_EVENTS - this.events.length} из ${validEvents.length}`, 'error');
-                    return;
-                }
-
-                for (const event of validEvents) {
-                    await this.saveEvent(event);
-                }
-
-                this.visibleEvents = this.config.VISIBLE_EVENTS;
-                await this.loadEvents();
-                this.showNotification(`Импортировано событий: ${validEvents.length}`, 'success');
-
-            } catch (err) {
-                console.error('Ошибка импорта:', err);
-                this.showNotification('Неверный формат файла', 'error');
-            }
-        };
-
-        document.body.appendChild(input);
-        input.click();
-        setTimeout(() => {
-            if (document.body.contains(input)) {
-                document.body.removeChild(input);
-            }
-        }, 1000);
     }
 
     showNotification(message, type = 'info') {
         const notification = document.getElementById('notification');
         if (!notification) return;
-
-        let icon = '';
-        switch (type) {
-            case 'success':
-                icon = '<svg viewBox="0 0 24 24"><path fill="#36F1B3" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L17.59,5.59L19,8L10,17Z"/></svg>';
-                break;
-            case 'error':
-                icon = '<svg viewBox="0 0 24 24"><path fill="#ff6b6b" d="M13,13H11V7H13M13,17H11V15H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/></svg>';
-                break;
-            default:
-                icon = '<svg viewBox="0 0 24 24"><path fill="#29B6F6" d="M13,9H11V7H13M13,17H11V11H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/></svg>';
-                break;
-        }
-
-        notification.innerHTML = `${icon} ${message}`;
+        
+        notification.textContent = message;
         notification.className = `notification ${type} show`;
-
-        if (notification.timeoutId) {
-            clearTimeout(notification.timeoutId);
-        }
-
-        notification.timeoutId = setTimeout(() => {
+        
+        setTimeout(() => {
             notification.classList.remove('show');
-            notification.timeoutId = null;
         }, 3000);
     }
 
-    escapeHTML(str) {
-        const div = document.createElement('div');
-        div.textContent = str;
-        return div.innerHTML;
+    exportEvents() {
+        const dataStr = JSON.stringify(this.events, null, 2);
+        const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+        
+        const exportFileDefaultName = `EternalFlow-export-${new Date().toISOString().slice(0, 10)}.json`;
+        
+        const linkElement = document.createElement('a');
+        linkElement.setAttribute('href', dataUri);
+        linkElement.setAttribute('download', exportFileDefaultName);
+        linkElement.click();
+        
+        this.showNotification('События экспортированы', 'success');
     }
 
-    setupServiceWorker() {
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./service-worker.js')
-                .then(registration => {
-                    console.log('Service Worker зарегистрирован:', registration);
+    importEvents() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        
+        input.onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const importedEvents = JSON.parse(event.target.result);
                     
-                    registration.update();
-                    
-                    navigator.serviceWorker.addEventListener('controllerchange', () => {
-                        window.location.reload();
-                    });
-                    
-                    if (navigator.serviceWorker.controller) {
-                        this.showNotification('Приложение готово к работе офлайн', 'success');
+                    if (!Array.isArray(importedEvents)) {
+                        throw new Error('Invalid file format');
                     }
-                })
-                .catch(err => {
-                    console.error('Ошибка регистрации Service Worker:', err);
+                    
+                    // Validate each event
+                    const validEvents = importedEvents.filter(event => 
+                        event && typeof event.title === 'string' && typeof event.date === 'number'
+                    );
+                    
+                    if (validEvents.length === 0) {
+                        throw new Error('No valid events found in file');
+                    }
+                    
+                    // Confirm import
+                    this.showImportConfirmation(validEvents);
+                } catch (error) {
+                    console.error('Error importing events:', error);
+                    this.showNotification('Ошибка импорта: неверный формат файла', 'error');
+                }
+            };
+            
+            reader.readAsText(file);
+        };
+        
+        input.click();
+    }
+
+    showImportConfirmation(events) {
+        const modal = document.createElement('div');
+        modal.className = 'confirmation-modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <h3>Импорт событий</h3>
+                <p>Найдено ${events.length} событий для импорта.</p>
+                <p>Текущие события будут сохранены, новые будут добавлены.</p>
+                <div class="modal-buttons">
+                    <button class="btn primary" id="confirmImport">Импортировать</button>
+                    <button class="btn" id="cancelImport">Отмена</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        setTimeout(() => {
+            modal.classList.add('show');
+        }, 10);
+        
+        document.getElementById('confirmImport').addEventListener('click', async () => {
+            try {
+                await this.performImport(events);
+                this.showNotification(`Импортировано ${events.length} событий`, 'success');
+                this.renderEvents();
+            } catch (error) {
+                console.error('Error importing events:', error);
+                this.showNotification('Ошибка импорта событий', 'error');
+            }
+            modal.remove();
+        });
+        
+        document.getElementById('cancelImport').addEventListener('click', () => {
+            modal.remove();
+        });
+        
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
+    }
+
+    async performImport(eventsToImport) {
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(['events'], 'readwrite');
+            const store = transaction.objectStore('events');
+            
+            // Add all events
+            let completed = 0;
+            let errors = 0;
+            
+            eventsToImport.forEach(event => {
+                const request = store.add({
+                    title: event.title,
+                    date: event.date,
+                    createdAt: event.createdAt || Date.now()
                 });
-        }
+                
+                request.onsuccess = () => {
+                    this.events.push({ ...event, id: request.result });
+                    completed++;
+                    
+                    if (completed + errors === eventsToImport.length) {
+                        if (errors > 0) {
+                            reject(new Error(`Failed to import ${errors} events`));
+                        } else {
+                            resolve();
+                        }
+                    }
+                };
+                
+                request.onerror = () => {
+                    errors++;
+                    console.error('Error importing event:', request.error);
+                    
+                    if (completed + errors === eventsToImport.length) {
+                        if (errors > 0) {
+                            reject(new Error(`Failed to import ${errors} events`));
+                        } else {
+                            resolve();
+                        }
+                    }
+                };
+            });
+        });
     }
 }
 
