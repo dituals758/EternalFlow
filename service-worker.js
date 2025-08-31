@@ -1,4 +1,4 @@
-const APP_VERSION = "1.2.0";
+const APP_VERSION = "1.4.0";
 const CACHE_NAME = `EternalFlow-v${APP_VERSION}`;
 const PRECACHE_URLS = [
     './',
@@ -36,18 +36,22 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
     if (event.request.method !== 'GET') return;
     
+    // Не кэшируем запросы к IndexedDB
     if (event.request.url.includes('/EternalFlowDB')) {
-        return fetch(event.request);
+        return;
     }
 
     event.respondWith(
         caches.match(event.request)
             .then(cachedResponse => {
+                // Возвращаем кэшированный response если найдено
                 if (cachedResponse) {
                     return cachedResponse;
                 }
 
+                // Иначе делаем запрос к сети
                 return fetch(event.request).then(response => {
+                    // Проверяем валидный ли response
                     if (!response || response.status !== 200 || response.type !== 'basic') {
                         return response;
                     }
@@ -58,7 +62,12 @@ self.addEventListener('fetch', event => {
 
                     return response;
                 });
-            }).catch(() => caches.match('./index.html'))
+            }).catch(() => {
+                // Fallback для SPA - возвращаем index.html для всех navigation запросов
+                if (event.request.mode === 'navigate') {
+                    return caches.match('./index.html');
+                }
+            })
     );
 });
 
