@@ -1,4 +1,4 @@
-const APP_VERSION = "1.4.1";
+const APP_VERSION = "1.4.2";
 const CACHE_NAME = `EternalFlow-v${APP_VERSION}`;
 const PRECACHE_URLS = [
     './',
