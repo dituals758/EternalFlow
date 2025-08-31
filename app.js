@@ -25,9 +25,40 @@ class EternalFlowApp {
             this.startTimers();
             this.renderEvents();
             this.checkNewVersion();
+            this.setupSVGGradients();
         } catch (error) {
             console.error('Error initializing app:', error);
             this.showNotification('Ошибка инициализации приложения', 'error');
+        }
+    }
+
+    setupSVGGradients() {
+        // Добавляем SVG градиент для иконок
+        const svgNS = "http://www.w3.org/2000/svg";
+        const gradient = document.createElementNS(svgNS, "linearGradient");
+        gradient.setAttribute("id", "gradient");
+        gradient.setAttribute("x1", "0%");
+        gradient.setAttribute("y1", "0%");
+        gradient.setAttribute("x2", "100%");
+        gradient.setAttribute("y2", "100%");
+        
+        const stop1 = document.createElementNS(svgNS, "stop");
+        stop1.setAttribute("offset", "0%");
+        stop1.setAttribute("class", "gradient-stop-1");
+        
+        const stop2 = document.createElementNS(svgNS, "stop");
+        stop2.setAttribute("offset", "100%");
+        stop2.setAttribute("class", "gradient-stop-2");
+        
+        gradient.appendChild(stop1);
+        gradient.appendChild(stop2);
+        
+        // Добавляем градиент в первый SVG для применения ко всем
+        const firstSvg = document.querySelector('svg');
+        if (firstSvg) {
+            const defs = document.createElementNS(svgNS, "defs");
+            defs.appendChild(gradient);
+            firstSvg.insertBefore(defs, firstSvg.firstChild);
         }
     }
 
@@ -108,6 +139,9 @@ class EternalFlowApp {
 
         // Ограничение длины заголовка
         document.getElementById('eventTitle').addEventListener('input', (e) => {
+            const counter = document.getElementById('eventTitleCounter');
+            counter.textContent = `${e.target.value.length}/${this.config.MAX_TITLE_LENGTH}`;
+            
             if (e.target.value.length > this.config.MAX_TITLE_LENGTH) {
                 e.target.value = e.target.value.slice(0, this.config.MAX_TITLE_LENGTH);
             }
@@ -258,8 +292,18 @@ class EternalFlowApp {
                 <div class="event-time-display">${timeText}</div>
                 
                 <div class="event-actions">
-                    <button id="edit-${event.id}" class="edit-btn" title="Редактировать">✏️</button>
-                    <button id="delete-${event.id}" class="delete-btn" title="Удалить">🗑️</button>
+                    <button id="edit-${event.id}" class="edit-btn" title="Редактировать">
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13M18.5 2.50001C18.8978 2.10219 19.4374 1.87869 20 1.87869C20.5626 1.87869 21.1022 2.10219 21.5 2.50001C21.8978 2.89784 22.1213 3.4374 22.1213 4.00001C22.1213 4.56262 21.8978 5.10219 21.5 5.50001L12 15L8 16L9 12L18.5 2.50001Z" 
+                                  stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                    <button id="delete-${event.id}" class="delete-btn" title="Удалить">
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path d="M19 7L18 19C18 20.1046 17.1046 21 16 21H8C6.89543 21 6 20.1046 6 19L5 7M10 11V17M14 11V17M15 7V4C15 3.44772 14.5523 3 14 3H10C9.44772 3 9 3.44772 9 4V7M4 7H20" 
+                                  stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
                 </div>
             </div>
         `;
