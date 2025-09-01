@@ -4,19 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EternalFlow: Отслеживание событий</title>
-    <meta name="theme-color" content="#0c0d2d">
+    <meta name="theme-color" content="#0a3531">
     <meta name="description" content="Приложение для отслеживания времени до и после важных событий">
     <link rel="stylesheet" href="./styles.css">
     <link rel="manifest" href="./manifest.json">
-    <link rel="icon" href="./icon-32.png" sizes="32x32">
-    <link rel="apple-touch-icon" href="./icon-192.png">
 </head>
 <body>
     <div class="container">
         <header class="app-header">
             <div class="logo">
                 <h1>EternalFlow</h1>
-                <p class="app-version">v1.4.2</p>
+                <p class="app-version">v1.5.1</p>
             </div>
             <div class="header-actions">
                 <button id="searchToggle" class="header-action-btn" aria-label="Поиск">
@@ -124,7 +122,7 @@
             <div class="modal-body">
                 <div class="form-group">
                     <label for="filterSelect">Фильтр событий</label>
-                    <select id="filterSelect">
+                    <select id="filterSelect" class="form-select">
                         <option value="all">Все события</option>
                         <option value="upcoming">Предстоящие</option>
                         <option value="past">Прошедшие</option>
@@ -132,7 +130,7 @@
                 </div>
                 <div class="form-group">
                     <label for="sortSelect">Сортировка</label>
-                    <select id="sortSelect">
+                    <select id="sortSelect" class="form-select">
                         <option value="date-asc">По дате (сначала старые)</option>
                         <option value="date-desc">По дате (сначала новые)</option>
                         <option value="title-asc">По названию (А-Я)</option>

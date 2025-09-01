@@ -112,6 +112,15 @@ class EternalFlowApp {
                 e.target.value = e.target.value.slice(0, this.config.MAX_TITLE_LENGTH);
             }
         });
+
+        // Закрытие модальных окон по Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal.show').forEach(modal => {
+                    modal.classList.remove('show');
+                });
+            }
+        });
     }
 
     startTimers() {
@@ -570,9 +579,9 @@ class EternalFlowApp {
 
     checkNewVersion() {
         const lastVersion = localStorage.getItem('eternalFlowVersion');
-        if (!lastVersion || lastVersion !== '1.4.0') {
-            this.showNotification('EternalFlow обновлен до версии 1.4.0!', 'info');
-            localStorage.setItem('eternalFlowVersion', '1.4.0');
+        if (!lastVersion || lastVersion !== '1.5.1') {
+            this.showNotification('EternalFlow обновлен до версии 1.5.1!', 'info');
+            localStorage.setItem('eternalFlowVersion', '1.5.1');
         }
     }
 }
