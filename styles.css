@@ -897,3 +897,120 @@ body {
         backdrop-filter: var(--blur);
     }
 }
+
+/* Улучшенная поддержка Dynamic Island */
+@supports (padding-top: constant(safe-area-inset-top)) {
+    .container {
+        padding-top: calc(2rem + constant(safe-area-inset-top));
+        padding-bottom: calc(2rem + constant(safe-area-inset-bottom));
+    }
+    
+    .app-header {
+        padding-top: calc(1.5rem + constant(safe-area-inset-top));
+    }
+}
+
+@supports (padding-top: env(safe-area-inset-top)) {
+    .container {
+        padding-top: calc(2rem + env(safe-area-inset-top));
+        padding-bottom: calc(2rem + env(safe-area-inset-bottom));
+    }
+    
+    .app-header {
+        padding-top: calc(1.5rem + env(safe-area-inset-top));
+    }
+}
+
+/* Специфичные стили для iOS 18 */
+@supports (background: -apple-system-container) {
+    .modal-content,
+    .event-card,
+    .app-header {
+        background: -apple-system-container;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+}
+
+/* Улучшенная поддержка жестов iOS */
+.event-card,
+.action-btn,
+.header-action-btn {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* Оптимизация анимаций для iOS */
+@media (prefers-reduced-motion: no-preference) {
+    .event-card,
+    .action-btn,
+    .header-action-btn {
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                    background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                    box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+}
+
+/* Улучшенная поддержка Haptic Touch */
+@media (hover: none) and (pointer: coarse) {
+    .event-card:active,
+    .action-btn:active,
+    .header-action-btn:active {
+        transform: scale(0.97);
+        opacity: 0.8;
+    }
+}
+
+/* Улучшенный внешний вид элементов формы на iOS */
+.form-input,
+.form-select {
+    -webkit-appearance: none;
+    appearance: none;
+    border-radius: 12px;
+}
+
+/* Улучшенная поддержка темной темы iOS */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --background: #000000;
+        --surface: #1c1c1e;
+        --text: #ffffff;
+        --text-secondary: rgba(255, 255, 255, 0.7);
+    }
+}
+
+/* Специфичные стили для Dynamic Island */
+.dynamic-island {
+    position: fixed;
+    top: env(safe-area-inset-top);
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 35px;
+    background: #000;
+    border-radius: 24px;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* Адаптация для новых закруглений экрана iOS 18 */
+@supports (border-radius: env(safe-area-inset-top)) {
+    .container {
+        border-radius: calc(env(safe-area-inset-top) / 2);
+    }
+}
+
+/* Улучшенная поддержка виджетов iOS */
+.widget-container {
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    padding: 16px;
+    background: var(--surface);
+    border-radius: 16px;
+    margin: 8px;
+}
