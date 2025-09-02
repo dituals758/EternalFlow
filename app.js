@@ -2,7 +2,7 @@ class EternalFlowApp {
     constructor() {
         this.config = {
             DB_NAME: 'EternalFlowDB',
-            DB_VERSION: 4,
+            DB_VERSION: 5, // Increased version for new update
             MAX_TITLE_LENGTH: 50
         };
 
@@ -78,24 +78,31 @@ class EternalFlowApp {
     }
 
     setupEventListeners() {
+        // Form events
         document.getElementById('openEventFormBtn').addEventListener('click', () => this.openEventForm());
         document.getElementById('closeEventModal').addEventListener('click', () => this.closeEventForm());
+        document.getElementById('eventForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.handleSaveEvent();
+        });
         
-        document.getElementById('saveEventBtn').addEventListener('click', () => this.handleSaveEvent());
-        
+        // Search events
         document.getElementById('searchToggle').addEventListener('click', () => this.toggleSearch());
         document.getElementById('closeSearch').addEventListener('click', () => this.toggleSearch());
         document.getElementById('searchInput').addEventListener('input', (e) => this.handleSearch(e));
         
+        // Filter events
         document.getElementById('filterToggle').addEventListener('click', () => this.openFilterModal());
         document.getElementById('closeFilterModal').addEventListener('click', () => this.closeFilterModal());
         document.getElementById('filterSelect').addEventListener('change', (e) => this.handleFilterChange(e));
         document.getElementById('sortSelect').addEventListener('change', (e) => this.handleSortChange(e));
         
+        // Utility events
         document.getElementById('exportBtn').addEventListener('click', () => this.exportEvents());
         document.getElementById('importBtn').addEventListener('click', () => this.importEvents());
         document.getElementById('clearBtn').addEventListener('click', () => this.clearAllEvents());
 
+        // Modal close events
         document.querySelectorAll('.modal').forEach(modal => {
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) {
@@ -104,6 +111,7 @@ class EternalFlowApp {
             });
         });
 
+        // Title character counter
         document.getElementById('eventTitle').addEventListener('input', (e) => {
             const counter = document.getElementById('eventTitleCounter');
             counter.textContent = `${e.target.value.length}/${this.config.MAX_TITLE_LENGTH}`;
@@ -113,7 +121,7 @@ class EternalFlowApp {
             }
         });
 
-        // Закрытие модальных окон по Escape
+        // Close modals with Escape key
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 document.querySelectorAll('.modal.show').forEach(modal => {
@@ -384,7 +392,7 @@ class EternalFlowApp {
     }
 
     async updateEvent(id, updates) {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve, reject) {
             const transaction = this.db.transaction(['events'], 'readwrite');
             const store = transaction.objectStore('events');
             
@@ -579,9 +587,9 @@ class EternalFlowApp {
 
     checkNewVersion() {
         const lastVersion = localStorage.getItem('eternalFlowVersion');
-        if (!lastVersion || lastVersion !== '1.5.1') {
-            this.showNotification('EternalFlow обновлен до версии 1.5.1!', 'info');
-            localStorage.setItem('eternalFlowVersion', '1.5.1');
+        if (!lastVersion || lastVersion !== '1.6.0') {
+            this.showNotification('EternalFlow обновлен до версии 1.6.0!', 'info');
+            localStorage.setItem('eternalFlowVersion', '1.6.0');
         }
     }
 }

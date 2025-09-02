@@ -41,59 +41,68 @@ body {
 .container {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 2rem 1rem;
+    padding: 1rem;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
 }
 
 .app-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
     position: relative;
     backdrop-filter: var(--blur);
     -webkit-backdrop-filter: var(--blur);
     background: rgba(10, 26, 25, 0.7);
     border-radius: var(--border-radius);
     border: 1px solid rgba(232, 245, 243, 0.1);
+    flex-wrap: wrap;
+    gap: 1rem;
 }
 
 .logo {
     display: flex;
     align-items: center;
     gap: 0.8rem;
+    flex-shrink: 0;
 }
 
 .logo h1 {
     margin: 0;
-    font-size: 2rem;
+    font-size: 1.8rem;
     font-weight: 800;
     background: var(--gradient-text);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
     letter-spacing: -0.5px;
+    line-height: 1.2;
 }
 
 .app-version {
     margin: 0;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     color: var(--text-secondary);
     background: rgba(232, 245, 243, 0.1);
-    padding: 0.3rem 0.7rem;
-    border-radius: 12px;
+    padding: 0.25rem 0.6rem;
+    border-radius: 10px;
     backdrop-filter: var(--blur);
     -webkit-backdrop-filter: var(--blur);
 }
 
 .header-actions {
     display: flex;
-    gap: 0.8rem;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
 }
 
 .header-action-btn {
-    width: 48px;
-    height: 48px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -107,6 +116,7 @@ body {
     appearance: none;
     backdrop-filter: var(--blur);
     -webkit-backdrop-filter: var(--blur);
+    flex-shrink: 0;
 }
 
 .header-action-btn:hover {
@@ -115,14 +125,25 @@ body {
     box-shadow: 0 8px 24px rgba(10, 53, 49, 0.4);
 }
 
+.header-action-btn.danger {
+    background: rgba(255, 107, 107, 0.15);
+    color: var(--danger);
+    border-color: rgba(255, 107, 107, 0.2);
+}
+
+.header-action-btn.danger:hover {
+    background: rgba(255, 107, 107, 0.25);
+    border-color: rgba(255, 107, 107, 0.3);
+}
+
 .header-action-btn svg {
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
     stroke: var(--text);
 }
 
 .search-expanded {
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
     animation: slideDown 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -145,7 +166,7 @@ body {
 
 #searchInput {
     width: 100%;
-    padding: 16px 60px 16px 24px;
+    padding: 14px 50px 14px 20px;
     border-radius: 50px;
     border: 1px solid rgba(232, 245, 243, 0.15);
     background: rgba(232, 245, 243, 0.08);
@@ -157,6 +178,7 @@ body {
     backdrop-filter: var(--blur);
     -webkit-backdrop-filter: var(--blur);
     font-weight: 500;
+    min-height: 48px;
 }
 
 #searchInput:focus {
@@ -172,7 +194,7 @@ body {
 
 .close-search {
     position: absolute;
-    right: 16px;
+    right: 12px;
     background: transparent;
     border: none;
     color: var(--text);
@@ -182,8 +204,8 @@ body {
     transition: var(--transition);
     -webkit-appearance: none;
     appearance: none;
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -201,21 +223,11 @@ body {
 
 .action-buttons {
     display: flex;
-    flex-direction: column;
-    gap: 1.2rem;
-    margin-bottom: 2.5rem;
-}
-
-@media (min-width: 768px) {
-    .action-buttons {
-        flex-direction: row;
-        align-items: center;
-        justify-content: space-between;
-    }
+    margin-bottom: 2rem;
 }
 
 .action-btn {
-    padding: 16px 24px;
+    padding: 14px 22px;
     border-radius: var(--border-radius);
     background: rgba(232, 245, 243, 0.1);
     border: 1px solid rgba(232, 245, 243, 0.15);
@@ -233,6 +245,8 @@ body {
     backdrop-filter: var(--blur);
     -webkit-backdrop-filter: var(--blur);
     font-family: inherit;
+    min-height: 50px;
+    min-width: 180px;
 }
 
 .action-btn.primary {
@@ -258,29 +272,6 @@ body {
     transform: translateY(0);
 }
 
-.action-btn.icon-only {
-    width: 56px;
-    height: 56px;
-    padding: 16px;
-    border-radius: 50%;
-}
-
-.action-btn.danger {
-    background: rgba(255, 107, 107, 0.15);
-    color: var(--danger);
-    border-color: rgba(255, 107, 107, 0.2);
-}
-
-.action-btn.danger:hover {
-    background: rgba(255, 107, 107, 0.25);
-    border-color: rgba(255, 107, 107, 0.3);
-}
-
-.utility-buttons {
-    display: flex;
-    gap: 1rem;
-}
-
 .action-btn svg {
     width: 20px;
     height: 20px;
@@ -290,23 +281,24 @@ body {
 .events-container {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 1.8rem;
-    margin-bottom: 4rem;
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+    flex: 1;
 }
 
 @media (min-width: 640px) {
     .events-container {
-        grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
     }
 }
 
 .event-card {
     background: rgba(10, 26, 25, 0.7);
     border-radius: var(--border-radius);
-    padding: 2rem;
+    padding: 1.5rem;
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
+    gap: 1.2rem;
     border: 1px solid rgba(232, 245, 243, 0.1);
     transition: var(--transition);
     position: relative;
@@ -314,6 +306,7 @@ body {
     animation: fadeIn 0.5s ease;
     backdrop-filter: var(--blur);
     -webkit-backdrop-filter: var(--blur);
+    min-height: 220px;
 }
 
 .event-card::before {
@@ -345,12 +338,12 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    gap: 1.2rem;
+    gap: 1rem;
 }
 
 .event-title {
     font-weight: 700;
-    font-size: 1.3rem;
+    font-size: 1.2rem;
     color: var(--text);
     overflow: hidden;
     text-overflow: ellipsis;
@@ -359,17 +352,20 @@ body {
     -webkit-box-orient: vertical;
     line-height: 1.4;
     flex: 1;
+    margin: 0;
+    min-height: 2.8rem;
 }
 
 .event-status {
-    padding: 8px 14px;
-    border-radius: 20px;
-    font-size: 0.85rem;
+    padding: 6px 12px;
+    border-radius: 16px;
+    font-size: 0.8rem;
     font-weight: 600;
     white-space: nowrap;
     flex-shrink: 0;
     backdrop-filter: var(--blur);
     -webkit-backdrop-filter: var(--blur);
+    min-width: max-content;
 }
 
 .event-card.future .event-status {
@@ -385,23 +381,24 @@ body {
 }
 
 .event-date {
-    font-size: 1rem;
+    font-size: 0.95rem;
     color: var(--text-secondary);
-    padding: 10px 14px;
+    padding: 8px 12px;
     background: rgba(232, 245, 243, 0.06);
-    border-radius: 12px;
+    border-radius: 10px;
     border-left: 3px solid var(--primary);
     backdrop-filter: var(--blur);
     -webkit-backdrop-filter: var(--blur);
+    margin: 0;
 }
 
 .event-time-display {
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     font-weight: 700;
     color: var(--text);
-    padding: 14px;
+    padding: 12px;
     background: rgba(232, 245, 243, 0.07);
-    border-radius: 12px;
+    border-radius: 10px;
     text-align: center;
     border: 1px solid rgba(232, 245, 243, 0.1);
     backdrop-filter: var(--blur);
@@ -409,6 +406,11 @@ body {
     background: var(--gradient-primary);
     background-size: 200% 200%;
     animation: gradientShift 3s ease infinite;
+    margin: 0;
+    min-height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 @keyframes gradientShift {
@@ -420,13 +422,13 @@ body {
 .event-actions {
     display: flex;
     justify-content: flex-end;
-    gap: 1rem;
+    gap: 0.8rem;
     margin-top: auto;
 }
 
 .edit-btn, .delete-btn {
-    width: 48px;
-    height: 48px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -454,8 +456,8 @@ body {
 }
 
 .edit-btn svg, .delete-btn svg {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
     stroke: var(--text);
 }
 
@@ -513,7 +515,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1.8rem;
+    padding: 1.5rem;
     border-bottom: 1px solid rgba(232, 245, 243, 0.1);
     position: sticky;
     top: 0;
@@ -527,7 +529,7 @@ body {
 
 .modal-header h2 {
     margin: 0;
-    font-size: 1.6rem;
+    font-size: 1.5rem;
     color: var(--text);
     font-weight: 700;
     background: var(--gradient-text);
@@ -546,8 +548,8 @@ body {
     transition: var(--transition);
     -webkit-appearance: none;
     appearance: none;
-    width: 40px;
-    height: 40px;
+    width: 38px;
+    height: 38px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -567,31 +569,30 @@ body {
 }
 
 .modal-body {
-    padding: 1.8rem;
+    padding: 1.5rem;
 }
 
 .event-form {
     display: flex;
     flex-direction: column;
-    gap: 1.8rem;
+    gap: 1.5rem;
 }
 
 .form-group {
     display: flex;
     flex-direction: column;
-    gap: 0.8rem;
+    gap: 0.6rem;
 }
 
 .form-group label {
     font-weight: 600;
     color: var(--text);
-    font-size: 1rem;
+    font-size: 0.95rem;
 }
 
-/* Стили для полей ввода */
 #eventTitle, #eventDate {
     width: 100%;
-    padding: 16px;
+    padding: 14px;
     border-radius: 12px;
     border: 1px solid rgba(232, 245, 243, 0.15);
     background: rgba(232, 245, 243, 0.08);
@@ -603,6 +604,7 @@ body {
     backdrop-filter: var(--blur);
     -webkit-backdrop-filter: var(--blur);
     font-family: inherit;
+    min-height: 48px;
 }
 
 #eventTitle:focus, #eventDate:focus {
@@ -616,16 +618,14 @@ body {
     color: rgba(232, 245, 243, 0.5);
 }
 
-/* Специфичные стили для datetime-local */
 #eventDate {
     padding-right: 45px;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e8f5f3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 2v4M16 2v4M3 10h18M5 18h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
-    background-position: right 16px center;
-    background-size: 20px;
+    background-position: right 14px center;
+    background-size: 18px;
 }
 
-/* Улучшенная поддержка Safari */
 #eventDate::-webkit-datetime-edit {
     color: var(--text);
 }
@@ -637,32 +637,9 @@ body {
     margin-left: -20px;
 }
 
-.form-input {
-    width: 100%;
-    padding: 16px;
-    border-radius: 12px;
-    border: 1px solid rgba(232, 245, 243, 0.15);
-    background: rgba(232, 245, 243, 0.08);
-    color: var(--text);
-    font-size: 1rem;
-    transition: var(--transition);
-    -webkit-appearance: none;
-    appearance: none;
-    backdrop-filter: var(--blur);
-    -webkit-backdrop-filter: var(--blur);
-    font-family: inherit;
-}
-
-.form-input:focus {
-    outline: none;
-    border-color: var(--primary);
-    background: rgba(232, 245, 243, 0.12);
-    box-shadow: 0 0 0 4px rgba(10, 53, 49, 0.3);
-}
-
 .form-select {
     width: 100%;
-    padding: 16px;
+    padding: 14px;
     border-radius: 12px;
     border: 1px solid rgba(232, 245, 243, 0.15);
     background: rgba(232, 245, 243, 0.08);
@@ -677,8 +654,9 @@ body {
     padding-right: 50px;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e8f5f3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
-    background-position: right 16px center;
+    background-position: right 14px center;
     background-size: 16px;
+    min-height: 48px;
 }
 
 .form-select:focus {
@@ -690,12 +668,12 @@ body {
 
 .char-counter {
     text-align: right;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     color: var(--text-secondary);
 }
 
 .btn {
-    padding: 16px 28px;
+    padding: 14px 24px;
     border-radius: 12px;
     background: var(--gradient-primary);
     color: var(--text);
@@ -711,6 +689,7 @@ body {
     justify-content: center;
     gap: 10px;
     font-family: inherit;
+    min-height: 48px;
 }
 
 .btn:hover {
@@ -733,17 +712,17 @@ body {
 .empty-state {
     grid-column: 1 / -1;
     text-align: center;
-    padding: 4rem 2rem;
+    padding: 3rem 1.5rem;
     opacity: 0.7;
 }
 
 .empty-state p {
     margin: 0.8rem 0;
-    font-size: 1.2rem;
+    font-size: 1.1rem;
 }
 
 .empty-state p:first-child {
-    font-size: 2rem;
+    font-size: 1.8rem;
     font-weight: 700;
     background: var(--gradient-text);
     -webkit-background-clip: text;
@@ -761,6 +740,7 @@ body {
     cursor: pointer;
     transition: var(--transition);
     font-weight: 600;
+    min-height: 42px;
 }
 
 .clear-search-btn:hover {
@@ -770,16 +750,17 @@ body {
 
 .app-info {
     text-align: center;
-    padding: 2.5rem 1rem;
-    font-size: 0.9rem;
+    padding: 2rem 1rem;
+    font-size: 0.85rem;
     opacity: 0.7;
     border-top: 1px solid rgba(232, 245, 243, 0.1);
     display: flex;
     flex-direction: column;
-    gap: 0.8rem;
+    gap: 0.6rem;
     backdrop-filter: var(--blur);
     -webkit-backdrop-filter: var(--blur);
     border-radius: var(--border-radius);
+    margin-top: auto;
 }
 
 .notification {
@@ -787,7 +768,7 @@ body {
     bottom: 30px;
     left: 50%;
     transform: translateX(-50%) translateY(100px);
-    padding: 18px 28px;
+    padding: 16px 24px;
     border-radius: var(--border-radius);
     background: var(--surface);
     color: var(--text);
@@ -798,12 +779,13 @@ body {
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
     max-width: 90%;
     width: auto;
     backdrop-filter: var(--blur);
     -webkit-backdrop-filter: var(--blur);
     border: 1px solid rgba(232, 245, 243, 0.1);
+    min-height: 56px;
 }
 
 .notification::before {
@@ -853,9 +835,24 @@ body {
 }
 
 /* Адаптивность */
-@media (max-width: 480px) {
+@media (max-width: 768px) {
     .container {
-        padding: 1.2rem;
+        padding: 0.8rem;
+    }
+    
+    .app-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+    }
+    
+    .logo {
+        justify-content: center;
+        text-align: center;
+    }
+    
+    .header-actions {
+        justify-content: center;
     }
     
     .logo h1 {
@@ -864,7 +861,7 @@ body {
     
     .event-header {
         flex-direction: column;
-        gap: 1rem;
+        gap: 0.8rem;
     }
     
     .event-status {
@@ -875,18 +872,46 @@ body {
         margin: 0.5rem;
         width: calc(100% - 1rem);
     }
-    
-    .action-buttons {
-        flex-direction: column;
+}
+
+@media (max-width: 480px) {
+    .header-actions {
+        gap: 0.4rem;
     }
     
-    .utility-buttons {
-        align-self: center;
+    .header-action-btn {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .header-action-btn svg {
+        width: 18px;
+        height: 18px;
+    }
+    
+    .action-btn {
+        min-width: 160px;
+        padding: 12px 18px;
+        font-size: 0.95rem;
+    }
+    
+    .event-card {
+        padding: 1.2rem;
+        min-height: 200px;
+    }
+    
+    .event-title {
+        font-size: 1.1rem;
+    }
+    
+    .event-time-display {
+        font-size: 1rem;
+        padding: 10px;
     }
     
     /* Адаптивность для мобильных устройств */
     #eventTitle, #eventDate {
-        padding: 14px;
+        padding: 12px;
         font-size: 16px; /* Убираем zoom на iOS */
     }
 }
@@ -930,13 +955,13 @@ body {
 /* iOS специфичные стили */
 @supports (padding: max(0px)) {
     .container {
-        padding-left: max(1rem, env(safe-area-inset-left));
-        padding-right: max(1rem, env(safe-area-inset-right));
-        padding-bottom: max(2rem, env(safe-area-inset-bottom));
+        padding-left: max(0.8rem, env(safe-area-inset-left));
+        padding-right: max(0.8rem, env(safe-area-inset-right));
+        padding-bottom: max(0.8rem, env(safe-area-inset-bottom));
     }
     
     .app-header {
-        padding-top: max(1.5rem, env(safe-area-inset-top));
+        padding-top: max(1rem, env(safe-area-inset-top));
     }
 }
 
@@ -956,23 +981,23 @@ body {
 /* Улучшенная поддержка Dynamic Island */
 @supports (padding-top: constant(safe-area-inset-top)) {
     .container {
-        padding-top: calc(2rem + constant(safe-area-inset-top));
-        padding-bottom: calc(2rem + constant(safe-area-inset-bottom));
+        padding-top: calc(0.8rem + constant(safe-area-inset-top));
+        padding-bottom: calc(0.8rem + constant(safe-area-inset-bottom));
     }
     
     .app-header {
-        padding-top: calc(1.5rem + constant(safe-area-inset-top));
+        padding-top: calc(1rem + constant(safe-area-inset-top));
     }
 }
 
 @supports (padding-top: env(safe-area-inset-top)) {
     .container {
-        padding-top: calc(2rem + env(safe-area-inset-top));
-        padding-bottom: calc(2rem + env(safe-area-inset-bottom));
+        padding-top: calc(0.8rem + env(safe-area-inset-top));
+        padding-bottom: calc(0.8rem + env(safe-area-inset-bottom));
     }
     
     .app-header {
-        padding-top: calc(1.5rem + env(safe-area-inset-top));
+        padding-top: calc(1rem + env(safe-area-inset-top));
     }
 }
 

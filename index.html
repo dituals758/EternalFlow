@@ -18,17 +18,32 @@
         <header class="app-header">
             <div class="logo">
                 <h1>EternalFlow</h1>
-                <p class="app-version">v1.5.1</p>
+                <p class="app-version">v1.6.0</p>
             </div>
             <div class="header-actions">
-                <button id="searchToggle" class="header-action-btn" aria-label="Поиск">
+                <button id="searchToggle" class="header-action-btn" aria-label="Поиск" title="Поиск">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M21 21L15 15M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z"/>
                     </svg>
                 </button>
-                <button id="filterToggle" class="header-action-btn" aria-label="Фильтры">
+                <button id="filterToggle" class="header-action-btn" aria-label="Фильтры" title="Фильтры">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M4 6H20M7 12H17M9 18H15"/>
+                    </svg>
+                </button>
+                <button id="importBtn" class="header-action-btn" title="Импорт">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 16V17C4 18.6569 5.34315 20 7 20H17C18.6569 20 20 18.6569 20 17V16M16 12L12 16M12 16L8 12M12 16V4"/>
+                    </svg>
+                </button>
+                <button id="exportBtn" class="header-action-btn" title="Экспорт">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 16V17C4 18.6569 5.34315 20 7 20H17C18.6569 20 20 18.6569 20 17V16M16 12L12 8M12 8L8 12M12 8V16"/>
+                    </svg>
+                </button>
+                <button id="clearBtn" class="header-action-btn danger" title="Очистить все">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 7L18 19C18 20.1046 17.1046 21 16 21H8C6.89543 21 6 20.1046 6 19L5 7M10 11V17M14 11V17M15 7V4C15 3.44772 14.5523 3 14 3H10C9.44772 3 9 3.44772 9 4V7M4 7H20"/>
                     </svg>
                 </button>
             </div>
@@ -36,8 +51,8 @@
 
         <div class="search-expanded" id="searchExpanded" style="display: none;">
             <div class="search-box">
-                <input type="text" id="searchInput" placeholder="Поиск событий...">
-                <button id="closeSearch" class="close-search">
+                <input type="text" id="searchInput" placeholder="Поиск событий..." aria-label="Поиск событий">
+                <button id="closeSearch" class="close-search" aria-label="Закрыть поиск">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M18 6L6 18M6 6L18 18"/>
                     </svg>
@@ -53,71 +68,54 @@
                     </svg>
                     Добавить событие
                 </button>
-                <div class="utility-buttons">
-                    <button id="importBtn" class="action-btn icon-only" title="Импорт">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M4 16V17C4 18.6569 5.34315 20 7 20H17C18.6569 20 20 18.6569 20 17V16M16 12L12 16M12 16L8 12M12 16V4"/>
-                        </svg>
-                    </button>
-                    <button id="exportBtn" class="action-btn icon-only" title="Экспорт">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M4 16V17C4 18.6569 5.34315 20 7 20H17C18.6569 20 20 18.6569 20 17V16M16 12L12 8M12 8L8 12M12 8V16"/>
-                        </svg>
-                    </button>
-                    <button id="clearBtn" class="action-btn icon-only danger" title="Очистить">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M19 7L18 19C18 20.1046 17.1046 21 16 21H8C6.89543 21 6 20.1046 6 19L5 7M10 11V17M14 11V17M15 7V4C15 3.44772 14.5523 3 14 3H10C9.44772 3 9 3.44772 9 4V7M4 7H20"/>
-                        </svg>
-                    </button>
-                </div>
             </div>
 
-            <div class="modal" id="eventModal">
+            <div class="modal" id="eventModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h2 id="modalTitle">Новое событие</h2>
-                        <button class="close-modal" id="closeEventModal">
+                        <button class="close-modal" id="closeEventModal" aria-label="Закрыть окно">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M18 6L6 18M6 6L18 18"/>
                             </svg>
                         </button>
                     </div>
                     <div class="modal-body">
-                        <div class="event-form">
+                        <form class="event-form" id="eventForm">
                             <div class="form-group">
                                 <label for="eventTitle">Название события</label>
-                                <input type="text" id="eventTitle" placeholder="Название события" maxlength="50" required>
+                                <input type="text" id="eventTitle" placeholder="Название события" maxlength="50" required aria-describedby="eventTitleCounter">
                                 <div class="char-counter"><span id="eventTitleCounter">0/50</span></div>
                             </div>
                             <div class="form-group">
                                 <label for="eventDate">Дата и время</label>
                                 <input type="datetime-local" id="eventDate" required>
                             </div>
-                            <button id="saveEventBtn" class="btn primary">
+                            <button type="submit" id="saveEventBtn" class="btn primary">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M5 13L9 17L19 7"/>
                                 </svg>
                                 Сохранить
                             </button>
-                        </div>
+                        </form>
                     </div>
                 </div>
             </div>
 
-            <div class="events-container" id="eventsContainer"></div>
+            <div class="events-container" id="eventsContainer" aria-live="polite"></div>
 
             <div class="app-info">
                 <p>🔐 Ваши данные хранятся только на устройстве</p>
-                <p>Код приложения сгенерирован DeepSeek. Иконка приложения - YandexART</p>
+                <p>EternalFlow v1.6.0 — Вечный поток времени</p>
             </div>
         </main>
     </div>
 
-    <div class="modal" id="filterModal">
+    <div class="modal" id="filterModal" role="dialog" aria-modal="true" aria-labelledby="filterModalTitle">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Фильтры и сортировка</h2>
-                <button class="close-modal" id="closeFilterModal">
+                <h2 id="filterModalTitle">Фильтры и сортировка</h2>
+                <button class="close-modal" id="closeFilterModal" aria-label="Закрыть окно">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M18 6L6 18M6 6L18 18"/>
                     </svg>
@@ -145,7 +143,7 @@
         </div>
     </div>
 
-    <div class="notification" id="notification"></div>
+    <div class="notification" id="notification" role="status" aria-live="polite"></div>
 
     <script src="./app.js"></script>
 </body>
