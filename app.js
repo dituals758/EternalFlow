@@ -2,7 +2,7 @@ class EternalFlowApp {
     constructor() {
         this.config = {
             DB_NAME: 'EternalFlowDB',
-            DB_VERSION: 5, // Increased version for new update
+            DB_VERSION: 5,
             MAX_TITLE_LENGTH: 50
         };
 
@@ -44,16 +44,14 @@ class EternalFlowApp {
             request.onupgradeneeded = (event) => {
                 const db = event.target.result;
                 
-                if (db.objectStoreNames.contains('events')) {
-                    db.deleteObjectStore('events');
+                if (!db.objectStoreNames.contains('events')) {
+                    const store = db.createObjectStore('events', {
+                        keyPath: 'id',
+                        autoIncrement: true
+                    });
+                    store.createIndex('date', 'date', { unique: false });
+                    store.createIndex('createdAt', 'createdAt', { unique: false });
                 }
-                
-                const store = db.createObjectStore('events', {
-                    keyPath: 'id',
-                    autoIncrement: true
-                });
-                store.createIndex('date', 'date', { unique: false });
-                store.createIndex('createdAt', 'createdAt', { unique: false });
             };
         });
     }
@@ -114,10 +112,11 @@ class EternalFlowApp {
         // Title character counter
         document.getElementById('eventTitle').addEventListener('input', (e) => {
             const counter = document.getElementById('eventTitleCounter');
-            counter.textContent = `${e.target.value.length}/${this.config.MAX_TITLE_LENGTH}`;
+            const value = e.target.value;
+            counter.textContent = `${value.length}/${this.config.MAX_TITLE_LENGTH}`;
             
-            if (e.target.value.length > this.config.MAX_TITLE_LENGTH) {
-                e.target.value = e.target.value.slice(0, this.config.MAX_TITLE_LENGTH);
+            if (value.length > this.config.MAX_TITLE_LENGTH) {
+                e.target.value = value.slice(0, this.config.MAX_TITLE_LENGTH);
             }
         });
 
@@ -230,18 +229,23 @@ class EternalFlowApp {
             `;
             
             if (this.searchQuery) {
-                document.getElementById('clearSearchBtn').addEventListener('click', () => {
-                    this.searchQuery = '';
-                    document.getElementById('searchInput').value = '';
-                    this.renderEvents();
-                });
+                const clearSearchBtn = document.getElementById('clearSearchBtn');
+                if (clearSearchBtn) {
+                    clearSearchBtn.addEventListener('click', () => {
+                        this.searchQuery = '';
+                        document.getElementById('searchInput').value = '';
+                        this.renderEvents();
+                    });
+                }
             }
         } else {
             container.innerHTML = filteredEvents.map(event => this.createEventCard(event)).join('');
             
             filteredEvents.forEach(event => {
-                document.getElementById(`edit-${event.id}`).addEventListener('click', () => this.editEvent(event.id));
-                document.getElementById(`delete-${event.id}`).addEventListener('click', () => this.deleteEvent(event.id));
+                const editBtn = document.getElementById(`edit-${event.id}`);
+                const deleteBtn = document.getElementById(`delete-${event.id}`);
+                if (editBtn) editBtn.addEventListener('click', () => this.editEvent(event.id));
+                if (deleteBtn) deleteBtn.addEventListener('click', () => this.deleteEvent(event.id));
             });
         }
     }
@@ -392,7 +396,7 @@ class EternalFlowApp {
     }
 
     async updateEvent(id, updates) {
-        return new Promise((resolve, reject) {
+        return new Promise((resolve, reject) => {
             const transaction = this.db.transaction(['events'], 'readwrite');
             const store = transaction.objectStore('events');
             
@@ -418,7 +422,12 @@ class EternalFlowApp {
         try {
             const transaction = this.db.transaction(['events'], 'readwrite');
             const store = transaction.objectStore('events');
-            await store.delete(id);
+            const request = store.delete(id);
+            
+            await new Promise((resolve, reject) => {
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(request.error);
+            });
             
             this.showNotification('Событие удалено', 'success');
             await this.loadEvents();
@@ -435,7 +444,12 @@ class EternalFlowApp {
         try {
             const transaction = this.db.transaction(['events'], 'readwrite');
             const store = transaction.objectStore('events');
-            await store.clear();
+            const request = store.clear();
+            
+            await new Promise((resolve, reject) => {
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(request.error);
+            });
             
             this.events = [];
             this.showNotification('Все события удалены', 'success');
