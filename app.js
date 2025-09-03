@@ -1,9 +1,13 @@
+// app.js
+import { APP_VERSION } from './config.js';
+
 class EternalFlowApp {
     constructor() {
         this.config = {
             DB_NAME: 'EternalFlowDB',
             DB_VERSION: 5,
-            MAX_TITLE_LENGTH: 50
+            MAX_TITLE_LENGTH: 50,
+            APP_VERSION: APP_VERSION
         };
 
         this.events = [];
@@ -601,9 +605,9 @@ class EternalFlowApp {
 
     checkNewVersion() {
         const lastVersion = localStorage.getItem('eternalFlowVersion');
-        if (!lastVersion || lastVersion !== '1.6.0') {
-            this.showNotification('EternalFlow обновлен до версии 1.6.0!', 'info');
-            localStorage.setItem('eternalFlowVersion', '1.6.0');
+        if (!lastVersion || lastVersion !== APP_VERSION) {
+            this.showNotification(`EternalFlow обновлен до версии ${APP_VERSION}!`, 'info');
+            localStorage.setItem('eternalFlowVersion', APP_VERSION);
         }
     }
 }

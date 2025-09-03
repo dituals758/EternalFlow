@@ -1,10 +1,12 @@
-const APP_VERSION = "1.6.1";
+importScripts('./config.js');
+
 const CACHE_NAME = `EternalFlow-v${APP_VERSION}`;
 const PRECACHE_URLS = [
     './',
     './index.html',
     './styles.css',
     './app.js',
+    // './config.js', Не кешируем чтобы менять версии
     './manifest.json',
     './icon-32.png',
     './icon-192.png',

@@ -18,7 +18,7 @@
         <header class="app-header">
             <div class="logo">
                 <h1>EternalFlow</h1>
-                <p class="app-version">v1.6.0</p>
+                <p class="app-version" id="versionDisplay">v1.6.1</p>
             </div>
             <div class="header-actions">
                 <button id="searchToggle" class="header-action-btn" aria-label="Поиск" title="Поиск">
@@ -106,7 +106,7 @@
 
             <div class="app-info">
                 <p>🔐 Ваши данные хранятся только на устройстве</p>
-                <p>EternalFlow v1.6.0 — Вечный поток времени</p>
+                <p>EternalFlow v<span id="footerVersion">0.0.0</span> — Вечный поток времени</p>
             </div>
         </main>
     </div>
@@ -145,6 +145,13 @@
 
     <div class="notification" id="notification" role="status" aria-live="polite"></div>
 
-    <script src="./app.js"></script>
+    <script type="module" src="./app.js"></script>
+    <script>
+        // Обновляем версию в интерфейсе после загрузки конфига
+        import('./config.js').then(module => {
+            document.getElementById('versionDisplay').textContent = `v${module.APP_VERSION}`;
+            document.getElementById('footerVersion').textContent = module.APP_VERSION;
+        });
+    </script>
 </body>
 </html>
