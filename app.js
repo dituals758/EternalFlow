@@ -4,7 +4,7 @@ class EternalFlowApp {
     constructor() {
         this.config = {
             DB_NAME: 'EternalFlowDB',
-            DB_VERSION: 6, // Увеличил версию базы данных
+            DB_VERSION: 7,
             MAX_TITLE_LENGTH: 50,
             APP_VERSION: APP_VERSION
         };
@@ -16,6 +16,7 @@ class EternalFlowApp {
         this.searchQuery = '';
         this.timerInterval = null;
         this.db = null;
+        this.currentTab = 'all';
 
         this.init();
     }
@@ -28,6 +29,7 @@ class EternalFlowApp {
             this.startTimers();
             this.renderEvents();
             this.checkNewVersion();
+            this.setupTabBar();
         } catch (error) {
             console.error('Error initializing app:', error);
             this.showNotification('Ошибка инициализации приложения', 'error');
@@ -42,7 +44,6 @@ class EternalFlowApp {
             request.onsuccess = (event) => {
                 this.db = event.target.result;
                 
-                // Добавляем обработчик ошибок базы данных
                 this.db.onerror = (event) => {
                     console.error('Database error:', event.target.error);
                     this.showNotification('Ошибка базы данных', 'error');
@@ -55,7 +56,6 @@ class EternalFlowApp {
                 const db = event.target.result;
                 const oldVersion = event.oldVersion;
                 
-                // Миграция данных при обновлении версии
                 if (oldVersion < 1 || !db.objectStoreNames.contains('events')) {
                     const store = db.createObjectStore('events', {
                         keyPath: 'id',
@@ -65,10 +65,8 @@ class EternalFlowApp {
                     store.createIndex('createdAt', 'createdAt', { unique: false });
                 }
                 
-                // Дополнительные миграции при будущих обновлениях
-                if (oldVersion < 5) {
-                    // Миграция для версий ниже 5
-                    console.log('Performing database migration from version', oldVersion);
+                if (oldVersion < 7) {
+                    console.log('Performing database migration to version 7');
                 }
             };
         });
@@ -101,8 +99,10 @@ class EternalFlowApp {
 
     setupEventListeners() {
         // Form events
-        document.getElementById('openEventFormBtn').addEventListener('click', () => this.openEventForm());
+        document.getElementById('addEventBtn').addEventListener('click', () => this.openEventForm());
+        document.getElementById('addFirstEventBtn').addEventListener('click', () => this.openEventForm());
         document.getElementById('closeEventModal').addEventListener('click', () => this.closeEventForm());
+        document.getElementById('cancelEventBtn').addEventListener('click', () => this.closeEventForm());
         document.getElementById('eventForm').addEventListener('submit', (e) => {
             e.preventDefault();
             this.handleSaveEvent();
@@ -116,13 +116,15 @@ class EternalFlowApp {
         // Filter events
         document.getElementById('filterToggle').addEventListener('click', () => this.openFilterModal());
         document.getElementById('closeFilterModal').addEventListener('click', () => this.closeFilterModal());
-        document.getElementById('filterSelect').addEventListener('change', (e) => this.handleFilterChange(e));
-        document.getElementById('sortSelect').addEventListener('change', (e) => this.handleSortChange(e));
+        document.getElementById('applyFilterBtn').addEventListener('click', () => this.applyFilters());
         
         // Utility events
         document.getElementById('exportBtn').addEventListener('click', () => this.exportEvents());
         document.getElementById('importBtn').addEventListener('click', () => this.importEvents());
         document.getElementById('clearBtn').addEventListener('click', () => this.clearAllEvents());
+        
+        // Settings events
+        document.getElementById('darkModeToggle').addEventListener('change', (e) => this.toggleDarkMode(e));
 
         // Modal close events
         document.querySelectorAll('.modal').forEach(modal => {
@@ -154,29 +156,33 @@ class EternalFlowApp {
             }
         });
 
-        // Обработка PWA установки
+        // PWA installation
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             this.deferredPrompt = e;
-            this.showInstallButton();
         });
     }
 
-    showInstallButton() {
-        const installButton = document.getElementById('installBtn');
-        if (installButton && this.deferredPrompt) {
-            installButton.style.display = 'block';
-            installButton.addEventListener('click', () => {
-                this.deferredPrompt.prompt();
-                this.deferredPrompt.userChoice.then((choiceResult) => {
-                    if (choiceResult.outcome === 'accepted') {
-                        console.log('User accepted the install prompt');
-                    }
-                    this.deferredPrompt = null;
-                    installButton.style.display = 'none';
-                });
+    setupTabBar() {
+        const tabItems = document.querySelectorAll('.tab-item');
+        tabItems.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabName = tab.getAttribute('data-tab');
+                
+                // Update active tab
+                tabItems.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                
+                this.currentTab = tabName;
+                
+                if (tabName === 'settings') {
+                    this.openSettingsModal();
+                } else {
+                    this.filter = tabName === 'all' ? 'all' : tabName;
+                    this.renderEvents();
+                }
             });
-        }
+        });
     }
 
     startTimers() {
@@ -240,6 +246,7 @@ class EternalFlowApp {
 
     renderEvents() {
         const container = document.getElementById('eventsContainer');
+        const emptyState = document.getElementById('emptyState');
         let filteredEvents = this.events;
 
         if (this.filter === 'upcoming') {
@@ -269,15 +276,17 @@ class EternalFlowApp {
         });
 
         if (filteredEvents.length === 0) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <p>📋</p>
-                    <p>${this.searchQuery ? 'По вашему запросу ничего не найдено' : 'Событий пока нет'}</p>
-                    ${this.searchQuery ? '<button class="clear-search-btn" id="clearSearchBtn">Очистить поиск</button>' : ''}
-                </div>
-            `;
+            container.innerHTML = '';
+            emptyState.style.display = 'flex';
             
             if (this.searchQuery) {
+                emptyState.innerHTML = `
+                    <div class="empty-icon">🔍</div>
+                    <h3>Ничего не найдено</h3>
+                    <p>Попробуйте изменить поисковый запрос</p>
+                    <button class="btn primary" id="clearSearchBtn">Очистить поиск</button>
+                `;
+                
                 const clearSearchBtn = document.getElementById('clearSearchBtn');
                 if (clearSearchBtn) {
                     clearSearchBtn.addEventListener('click', () => {
@@ -286,8 +295,21 @@ class EternalFlowApp {
                         this.renderEvents();
                     });
                 }
+            } else {
+                emptyState.innerHTML = `
+                    <div class="empty-icon">⏳</div>
+                    <h3>Нет событий</h3>
+                    <p>Добавьте первое событие, чтобы начать отслеживание времени</p>
+                    <button class="btn primary" id="addFirstEventBtn">Добавить событие</button>
+                `;
+                
+                const addFirstEventBtn = document.getElementById('addFirstEventBtn');
+                if (addFirstEventBtn) {
+                    addFirstEventBtn.addEventListener('click', () => this.openEventForm());
+                }
             }
         } else {
+            emptyState.style.display = 'none';
             container.innerHTML = filteredEvents.map(event => this.createEventCard(event)).join('');
             
             filteredEvents.forEach(event => {
@@ -550,16 +572,40 @@ class EternalFlowApp {
         document.getElementById('filterModal').classList.remove('show');
     }
 
-    handleFilterChange(e) {
-        this.filter = e.target.value;
+    applyFilters() {
+        this.filter = document.getElementById('filterSelect').value;
+        this.sort = document.getElementById('sortSelect').value;
         this.renderEvents();
         this.closeFilterModal();
     }
 
-    handleSortChange(e) {
-        this.sort = e.target.value;
-        this.renderEvents();
-        this.closeFilterModal();
+    openSettingsModal() {
+        document.getElementById('settingsModal').classList.add('show');
+        
+        // Set current dark mode preference
+        const isDarkMode = localStorage.getItem('darkMode') === 'true' || 
+                          (window.matchMedia('(prefers-color-scheme: dark)').matches && 
+                           localStorage.getItem('darkMode') !== 'false');
+        document.getElementById('darkModeToggle').checked = isDarkMode;
+    }
+
+    toggleDarkMode(e) {
+        const isDarkMode = e.target.checked;
+        localStorage.setItem('darkMode', isDarkMode);
+        
+        if (isDarkMode) {
+            document.documentElement.style.setProperty('--background', '#000000');
+            document.documentElement.style.setProperty('--surface', '#1C1C1E');
+            document.documentElement.style.setProperty('--surface-variant', '#2C2C2E');
+            document.documentElement.style.setProperty('--text', '#FFFFFF');
+            document.documentElement.style.setProperty('--text-secondary', 'rgba(235, 235, 245, 0.6)');
+        } else {
+            document.documentElement.style.setProperty('--background', '#F2F2F7');
+            document.documentElement.style.setProperty('--surface', '#FFFFFF');
+            document.documentElement.style.setProperty('--surface-variant', '#E5E5EA');
+            document.documentElement.style.setProperty('--text', '#000000');
+            document.documentElement.style.setProperty('--text-secondary', 'rgba(60, 60, 67, 0.6)');
+        }
     }
 
     showNotification(message, type = 'info') {
@@ -567,8 +613,14 @@ class EternalFlowApp {
         notification.textContent = message;
         notification.className = `notification ${type} show`;
         
+        // Show in Dynamic Island on iOS
+        const dynamicIsland = document.getElementById('dynamicIsland');
+        dynamicIsland.textContent = message;
+        dynamicIsland.classList.add('visible');
+        
         setTimeout(() => {
             notification.classList.remove('show');
+            dynamicIsland.classList.remove('visible');
         }, 3000);
     }
 
@@ -680,7 +732,7 @@ document.addEventListener('DOMContentLoaded', () => {
             .then(registration => {
                 console.log('SW registered: ', registration);
                 
-                // Проверка обновлений каждые 24 часа
+                // Check for updates every 24 hours
                 setInterval(() => {
                     registration.update();
                 }, 24 * 60 * 60 * 1000);

@@ -3,52 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>EternalFlow: Отслеживание событий</title>
-    <meta name="theme-color" content="#0a3531">
+    <meta name="theme-color" content="#0A84FF">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="EternalFlow">
-    <meta name="description" content="Приложение для отслеживания времени до и после важных событий">
+    <meta name="description" content="Отслеживайте время до и после важных событий">
+    <title>EternalFlow: Отслеживание событий</title>
+    
+    <!-- iOS 18 специфичные мета-теги -->
+    <meta name="supported-color-schemes" content="light dark">
+    <meta name="theme-color" content="#0A84FF" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#0A84FF" media="(prefers-color-scheme: dark)">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
     <link rel="stylesheet" href="./styles.css">
     <link rel="manifest" href="./manifest.json">
     <link rel="apple-touch-icon" href="./icon-192.png">
+    <link rel="icon" type="image/png" href="./icon-192.png">
 </head>
 <body>
     <div class="container">
+        <!-- Динамик Айленд для уведомлений -->
+        <div class="dynamic-island" id="dynamicIsland"></div>
+        
         <header class="app-header">
-            <div class="logo">
-                <h1>EternalFlow</h1>
-                <p class="app-version" id="versionDisplay">v1.6.3</p>
+            <div class="header-content">
+                <div class="logo">
+                    <div class="logo-icon">⏳</div>
+                    <h1>EternalFlow</h1>
+                </div>
+                <p class="app-version" id="versionDisplay">v2.0</p>
             </div>
+            
             <div class="header-actions">
                 <button id="searchToggle" class="header-action-btn" aria-label="Поиск" title="Поиск">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M21 21L15 15M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z"/>
                     </svg>
                 </button>
+                
                 <button id="filterToggle" class="header-action-btn" aria-label="Фильтры" title="Фильтры">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M4 6H20M7 12H17M9 18H15"/>
                     </svg>
                 </button>
-                <button id="importBtn" class="header-action-btn" title="Импорт">
+                
+                <button id="addEventBtn" class="header-action-btn primary" title="Добавить событие">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M4 16V17C4 18.6569 5.34315 20 7 20H17C18.6569 20 20 18.6569 20 17V16M16 12L12 16M12 16L8 12M12 16V4"/>
-                    </svg>
-                </button>
-                <button id="exportBtn" class="header-action-btn" title="Экспорт">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M4 16V17C4 18.6569 5.34315 20 7 20H17C18.6569 20 20 18.6569 20 17V16M16 12L12 8M12 8L8 12M12 8V16"/>
-                    </svg>
-                </button>
-                <button id="clearBtn" class="header-action-btn danger" title="Очистить все">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M19 7L18 19C18 20.1046 17.1046 21 16 21H8C6.89543 21 6 20.1046 6 19L5 7M10 11V17M14 11V17M15 7V4C15 3.44772 14.5523 3 14 3H10C9.44772 3 9 3.44772 9 4V7M4 7H20"/>
-                    </svg>
-                </button>
-                <button id="installBtn" class="header-action-btn" title="Установить приложение" style="display: none;">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M12 16V2M5 9l7 7 7-7"/>
+                        <path d="M12 5V19M5 12H19"/>
                     </svg>
                 </button>
             </div>
@@ -56,6 +58,9 @@
 
         <div class="search-expanded" id="searchExpanded" style="display: none;">
             <div class="search-box">
+                <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 21L15 15M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z"/>
+                </svg>
                 <input type="text" id="searchInput" placeholder="Поиск событий..." aria-label="Поиск событий">
                 <button id="closeSearch" class="close-search" aria-label="Закрыть поиск">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -66,56 +71,81 @@
         </div>
 
         <main>
-            <div class="action-buttons">
-                <button id="openEventFormBtn" class="action-btn primary">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M12 5V19M5 12H19"/>
-                    </svg>
-                    Добавить событие
-                </button>
+            <div class="events-container" id="eventsContainer" aria-live="polite">
+                <!-- События будут добавлены через JavaScript -->
             </div>
 
-            <div class="modal" id="eventModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h2 id="modalTitle">Новое событие</h2>
-                        <button class="close-modal" id="closeEventModal" aria-label="Закрыть окно">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M18 6L6 18M6 6L18 18"/>
-                            </svg>
-                        </button>
-                    </div>
-                    <div class="modal-body">
-                        <form class="event-form" id="eventForm">
-                            <div class="form-group">
-                                <label for="eventTitle">Название события</label>
-                                <input type="text" id="eventTitle" placeholder="Название события" maxlength="50" required aria-describedby="eventTitleCounter">
-                                <div class="char-counter"><span id="eventTitleCounter">0/50</span></div>
-                            </div>
-                            <div class="form-group">
-                                <label for="eventDate">Дата и время</label>
-                                <input type="datetime-local" id="eventDate" required>
-                            </div>
-                            <button type="submit" id="saveEventBtn" class="btn primary">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M5 13L9 17L19 7"/>
-                                </svg>
-                                Сохранить
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-
-            <div class="events-container" id="eventsContainer" aria-live="polite"></div>
-
-            <div class="app-info">
-                <p>🔐 Ваши данные хранятся только на устройстве</p>
-                <p>EternalFlow v<span id="footerVersion">0.0.0</span> — Вечный поток времени</p>
+            <div class="empty-state" id="emptyState">
+                <div class="empty-icon">⏳</div>
+                <h3>Нет событий</h3>
+                <p>Добавьте первое событие, чтобы начать отслеживание времени</p>
+                <button id="addFirstEventBtn" class="btn primary">Добавить событие</button>
             </div>
         </main>
+
+        <nav class="tab-bar">
+            <button class="tab-item active" data-tab="all">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z"/>
+                    <path d="M9 22V12H15V22"/>
+                </svg>
+                <span>Все</span>
+            </button>
+            <button class="tab-item" data-tab="upcoming">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 8V12L15 15M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z"/>
+                </svg>
+                <span>Предстоящие</span>
+            </button>
+            <button class="tab-item" data-tab="past">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 8V12L15 15M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z"/>
+                    <line x1="3" y1="3" x2="21" y2="21" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                <span>Прошедшие</span>
+            </button>
+            <button class="tab-item" data-tab="settings">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                </svg>
+                <span>Настройки</span>
+            </button>
+        </nav>
     </div>
 
+    <!-- Модальное окно добавления/редактирования события -->
+    <div class="modal" id="eventModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Новое событие</h2>
+                <button class="close-modal" id="closeEventModal" aria-label="Закрыть окно">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 6L6 18M6 6L18 18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="event-form" id="eventForm">
+                    <div class="form-group">
+                        <label for="eventTitle">Название события</label>
+                        <input type="text" id="eventTitle" placeholder="Введите название" maxlength="50" required aria-describedby="eventTitleCounter">
+                        <div class="char-counter"><span id="eventTitleCounter">0/50</span></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="eventDate">Дата и время</label>
+                        <input type="datetime-local" id="eventDate" required>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn secondary" id="cancelEventBtn">Отмена</button>
+                        <button type="submit" id="saveEventBtn" class="btn primary">Сохранить</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно фильтров -->
     <div class="modal" id="filterModal" role="dialog" aria-modal="true" aria-labelledby="filterModalTitle">
         <div class="modal-content">
             <div class="modal-header">
@@ -144,23 +174,67 @@
                         <option value="title-desc">По названию (Я-А)</option>
                     </select>
                 </div>
+                <div class="form-actions">
+                    <button type="button" class="btn secondary" id="applyFilterBtn">Применить</button>
+                </div>
             </div>
         </div>
     </div>
 
+    <!-- Модальное окно настроек -->
+    <div class="modal" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsModalTitle">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="settingsModalTitle">Настройки</h2>
+                <button class="close-modal" id="closeSettingsModal" aria-label="Закрыть окно">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 6L6 18M6 6L18 18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-section">
+                    <h3>Внешний вид</h3>
+                    <div class="setting-item">
+                        <span>Темная тема</span>
+                        <label class="switch">
+                            <input type="checkbox" id="darkModeToggle">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <h3>Данные</h3>
+                    <div class="setting-item">
+                        <button class="btn secondary full-width" id="exportBtn">Экспорт событий</button>
+                    </div>
+                    <div class="setting-item">
+                        <button class="btn secondary full-width" id="importBtn">Импорт событий</button>
+                    </div>
+                    <div class="setting-item">
+                        <button class="btn danger full-width" id="clearBtn">Очистить все события</button>
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <h3>О приложении</h3>
+                    <div class="setting-item">
+                        <span>Версия</span>
+                        <span class="value">v2.0</span>
+                    </div>
+                    <div class="app-info">
+                        <p>EternalFlow — ваш персональный трекер времени</p>
+                        <p>Все данные хранятся только на вашем устройстве</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Уведомление -->
     <div class="notification" id="notification" role="status" aria-live="polite"></div>
 
     <script type="module" src="./app.js"></script>
-    <script>
-        // Обновляем версию в интерфейсе после загрузки конфига
-        import('./config.js').then(module => {
-            document.getElementById('versionDisplay').textContent = `v${module.APP_VERSION}`;
-            document.getElementById('footerVersion').textContent = module.APP_VERSION;
-        }).catch(error => {
-            console.error('Error loading config:', error);
-            document.getElementById('versionDisplay').textContent = 'v1.6.3';
-            document.getElementById('footerVersion').textContent = '1.6.3';
-        });
-    </script>
 </body>
 </html>
