@@ -18,7 +18,7 @@
         <header class="app-header">
             <div class="logo">
                 <h1>EternalFlow</h1>
-                <p class="app-version" id="versionDisplay">v1.6.1</p>
+                <p class="app-version" id="versionDisplay">v1.6.3</p>
             </div>
             <div class="header-actions">
                 <button id="searchToggle" class="header-action-btn" aria-label="Поиск" title="Поиск">
@@ -44,6 +44,11 @@
                 <button id="clearBtn" class="header-action-btn danger" title="Очистить все">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M19 7L18 19C18 20.1046 17.1046 21 16 21H8C6.89543 21 6 20.1046 6 19L5 7M10 11V17M14 11V17M15 7V4C15 3.44772 14.5523 3 14 3H10C9.44772 3 9 3.44772 9 4V7M4 7H20"/>
+                    </svg>
+                </button>
+                <button id="installBtn" class="header-action-btn" title="Установить приложение" style="display: none;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 16V2M5 9l7 7 7-7"/>
                     </svg>
                 </button>
             </div>
@@ -151,6 +156,10 @@
         import('./config.js').then(module => {
             document.getElementById('versionDisplay').textContent = `v${module.APP_VERSION}`;
             document.getElementById('footerVersion').textContent = module.APP_VERSION;
+        }).catch(error => {
+            console.error('Error loading config:', error);
+            document.getElementById('versionDisplay').textContent = 'v1.6.3';
+            document.getElementById('footerVersion').textContent = '1.6.3';
         });
     </script>
 </body>

@@ -6,11 +6,11 @@ const PRECACHE_URLS = [
     './index.html',
     './styles.css',
     './app.js',
-    // './config.js', Не кешируем чтобы менять версии
     './manifest.json',
     './icon-32.png',
     './icon-192.png',
-    './icon-512.png'
+    './icon-512.png',
+    './screenshot1.png'
 ];
 
 self.addEventListener('install', event => {
@@ -63,12 +63,16 @@ self.addEventListener('fetch', event => {
                         .then(cache => cache.put(event.request, responseToCache));
 
                     return response;
+                }).catch(() => {
+                    // Fallback для SPA - возвращаем index.html для всех navigation запросов
+                    if (event.request.mode === 'navigate') {
+                        return caches.match('./index.html');
+                    }
+                    return new Response('Network error happened', {
+                        status: 408,
+                        headers: { 'Content-Type': 'text/plain' },
+                    });
                 });
-            }).catch(() => {
-                // Fallback для SPA - возвращаем index.html для всех navigation запросов
-                if (event.request.mode === 'navigate') {
-                    return caches.match('./index.html');
-                }
             })
     );
 });

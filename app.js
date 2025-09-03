@@ -1,11 +1,10 @@
-// app.js
 import { APP_VERSION } from './config.js';
 
 class EternalFlowApp {
     constructor() {
         this.config = {
             DB_NAME: 'EternalFlowDB',
-            DB_VERSION: 5,
+            DB_VERSION: 6, // Увеличил версию базы данных
             MAX_TITLE_LENGTH: 50,
             APP_VERSION: APP_VERSION
         };
@@ -42,19 +41,34 @@ class EternalFlowApp {
             request.onerror = () => reject(request.error);
             request.onsuccess = (event) => {
                 this.db = event.target.result;
+                
+                // Добавляем обработчик ошибок базы данных
+                this.db.onerror = (event) => {
+                    console.error('Database error:', event.target.error);
+                    this.showNotification('Ошибка базы данных', 'error');
+                };
+                
                 resolve();
             };
 
             request.onupgradeneeded = (event) => {
                 const db = event.target.result;
+                const oldVersion = event.oldVersion;
                 
-                if (!db.objectStoreNames.contains('events')) {
+                // Миграция данных при обновлении версии
+                if (oldVersion < 1 || !db.objectStoreNames.contains('events')) {
                     const store = db.createObjectStore('events', {
                         keyPath: 'id',
                         autoIncrement: true
                     });
                     store.createIndex('date', 'date', { unique: false });
                     store.createIndex('createdAt', 'createdAt', { unique: false });
+                }
+                
+                // Дополнительные миграции при будущих обновлениях
+                if (oldVersion < 5) {
+                    // Миграция для версий ниже 5
+                    console.log('Performing database migration from version', oldVersion);
                 }
             };
         });
@@ -67,15 +81,21 @@ class EternalFlowApp {
                 return;
             }
 
-            const transaction = this.db.transaction(['events'], 'readonly');
-            const store = transaction.objectStore('events');
-            const request = store.getAll();
+            try {
+                const transaction = this.db.transaction(['events'], 'readonly');
+                const store = transaction.objectStore('events');
+                const request = store.getAll();
 
-            request.onerror = () => reject(request.error);
-            request.onsuccess = () => {
-                this.events = request.result;
-                resolve();
-            };
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => {
+                    this.events = request.result;
+                    resolve();
+                };
+                
+                transaction.onerror = () => reject(transaction.error);
+            } catch (error) {
+                reject(error);
+            }
         });
     }
 
@@ -121,6 +141,7 @@ class EternalFlowApp {
             
             if (value.length > this.config.MAX_TITLE_LENGTH) {
                 e.target.value = value.slice(0, this.config.MAX_TITLE_LENGTH);
+                counter.textContent = `${this.config.MAX_TITLE_LENGTH}/${this.config.MAX_TITLE_LENGTH}`;
             }
         });
 
@@ -132,6 +153,30 @@ class EternalFlowApp {
                 });
             }
         });
+
+        // Обработка PWA установки
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            this.deferredPrompt = e;
+            this.showInstallButton();
+        });
+    }
+
+    showInstallButton() {
+        const installButton = document.getElementById('installBtn');
+        if (installButton && this.deferredPrompt) {
+            installButton.style.display = 'block';
+            installButton.addEventListener('click', () => {
+                this.deferredPrompt.prompt();
+                this.deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('User accepted the install prompt');
+                    }
+                    this.deferredPrompt = null;
+                    installButton.style.display = 'none';
+                });
+            });
+        }
     }
 
     startTimers() {
@@ -379,6 +424,8 @@ class EternalFlowApp {
                 this.showNotification('Событие добавлено', 'success');
                 resolve();
             };
+            
+            transaction.onerror = () => reject(transaction.error);
         });
     }
 
@@ -408,6 +455,11 @@ class EternalFlowApp {
             request.onerror = () => reject(request.error);
             request.onsuccess = () => {
                 const event = request.result;
+                if (!event) {
+                    reject(new Error('Event not found'));
+                    return;
+                }
+                
                 Object.assign(event, updates);
                 
                 const putRequest = store.put(event);
@@ -417,6 +469,8 @@ class EternalFlowApp {
                     resolve();
                 };
             };
+            
+            transaction.onerror = () => reject(transaction.error);
         });
     }
 
@@ -431,6 +485,7 @@ class EternalFlowApp {
             await new Promise((resolve, reject) => {
                 request.onsuccess = () => resolve();
                 request.onerror = () => reject(request.error);
+                transaction.onerror = () => reject(transaction.error);
             });
             
             this.showNotification('Событие удалено', 'success');
@@ -453,6 +508,7 @@ class EternalFlowApp {
             await new Promise((resolve, reject) => {
                 request.onsuccess = () => resolve();
                 request.onerror = () => reject(request.error);
+                transaction.onerror = () => reject(transaction.error);
             });
             
             this.events = [];
@@ -570,6 +626,10 @@ class EternalFlowApp {
                 }
             };
             
+            reader.onerror = () => {
+                this.showNotification('Ошибка чтения файла', 'error');
+            };
+            
             reader.readAsText(file);
         };
         
@@ -619,6 +679,11 @@ document.addEventListener('DOMContentLoaded', () => {
         navigator.serviceWorker.register('./service-worker.js')
             .then(registration => {
                 console.log('SW registered: ', registration);
+                
+                // Проверка обновлений каждые 24 часа
+                setInterval(() => {
+                    registration.update();
+                }, 24 * 60 * 60 * 1000);
             })
             .catch(registrationError => {
                 console.log('SW registration failed: ', registrationError);
