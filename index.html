@@ -8,18 +8,13 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="EternalFlow">
     <meta name="description" content="Отслеживайте время до и после важных событий">
-    <title>EternalFlow: Отслеживание событий</title>
-    
-    <!-- iOS 18 специфичные мета-теги -->
-    <meta name="supported-color-schemes" content="light dark">
-    <meta name="theme-color" content="#0A84FF" media="(prefers-color-scheme: light)">
-    <meta name="theme-color" content="#0A84FF" media="(prefers-color-scheme: dark)">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>EternalFlow: Отслеживание событий v2.1.0</title>
     
     <link rel="stylesheet" href="./styles.css">
     <link rel="manifest" href="./manifest.json">
-    <link rel="apple-touch-icon" href="./icon-192.png">
-    <link rel="icon" type="image/png" href="./icon-192.png">
+    <link rel="icon" href="./favicon.ico">
+    <link rel="apple-touch-icon" href="./icons/icon-192.png">
+    <link rel="icon" type="image/png" href="./icons/icon-192.png">
 </head>
 <body>
     <div class="container">
@@ -32,7 +27,7 @@
                     <div class="logo-icon">⏳</div>
                     <h1>EternalFlow</h1>
                 </div>
-                <p class="app-version" id="versionDisplay">v2.0</p>
+                <p class="app-version" id="versionDisplay">v2.1.0</p>
             </div>
             
             <div class="header-actions">
@@ -45,6 +40,12 @@
                 <button id="filterToggle" class="header-action-btn" aria-label="Фильтры" title="Фильтры">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M4 6H20M7 12H17M9 18H15"/>
+                    </svg>
+                </button>
+                
+                <button id="installBtn" class="header-action-btn" aria-label="Установить приложение" title="Установить приложение" style="display: none;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 17V3M7 12l5 5 5-5"/>
                     </svg>
                 </button>
                 
@@ -106,7 +107,7 @@
             </button>
             <button class="tab-item" data-tab="settings">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+                    <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l-.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
                     <circle cx="12" cy="12" r="3"/>
                 </svg>
                 <span>Настройки</span>
@@ -129,8 +130,8 @@
                 <form class="event-form" id="eventForm">
                     <div class="form-group">
                         <label for="eventTitle">Название события</label>
-                        <input type="text" id="eventTitle" placeholder="Введите название" maxlength="50" required aria-describedby="eventTitleCounter">
-                        <div class="char-counter"><span id="eventTitleCounter">0/50</span></div>
+                        <input type="text" id="eventTitle" placeholder="Введите название (макс. 50 символов)" maxlength="50" required>
+                        <span class="char-counter-inside" id="eventTitleCounter">0/50</span>
                     </div>
                     <div class="form-group">
                         <label for="eventDate">Дата и время</label>
@@ -221,7 +222,7 @@
                     <h3>О приложении</h3>
                     <div class="setting-item">
                         <span>Версия</span>
-                        <span class="value">v2.0</span>
+                        <span class="value">v2.1.0</span>
                     </div>
                     <div class="app-info">
                         <p>EternalFlow — ваш персональный трекер времени</p>

@@ -17,6 +17,7 @@ class EternalFlowApp {
         this.timerInterval = null;
         this.db = null;
         this.currentTab = 'all';
+        this.deferredPrompt = null;
 
         this.init();
     }
@@ -30,6 +31,8 @@ class EternalFlowApp {
             this.renderEvents();
             this.checkNewVersion();
             this.setupTabBar();
+            this.setupPWAInstall();
+            this.setupDarkMode();
         } catch (error) {
             console.error('Error initializing app:', error);
             this.showNotification('Ошибка инициализации приложения', 'error');
@@ -98,7 +101,6 @@ class EternalFlowApp {
     }
 
     setupEventListeners() {
-        // Form events
         document.getElementById('addEventBtn').addEventListener('click', () => this.openEventForm());
         document.getElementById('addFirstEventBtn').addEventListener('click', () => this.openEventForm());
         document.getElementById('closeEventModal').addEventListener('click', () => this.closeEventForm());
@@ -108,25 +110,20 @@ class EternalFlowApp {
             this.handleSaveEvent();
         });
         
-        // Search events
         document.getElementById('searchToggle').addEventListener('click', () => this.toggleSearch());
         document.getElementById('closeSearch').addEventListener('click', () => this.toggleSearch());
         document.getElementById('searchInput').addEventListener('input', (e) => this.handleSearch(e));
         
-        // Filter events
         document.getElementById('filterToggle').addEventListener('click', () => this.openFilterModal());
         document.getElementById('closeFilterModal').addEventListener('click', () => this.closeFilterModal());
         document.getElementById('applyFilterBtn').addEventListener('click', () => this.applyFilters());
         
-        // Utility events
         document.getElementById('exportBtn').addEventListener('click', () => this.exportEvents());
         document.getElementById('importBtn').addEventListener('click', () => this.importEvents());
         document.getElementById('clearBtn').addEventListener('click', () => this.clearAllEvents());
         
-        // Settings events
         document.getElementById('darkModeToggle').addEventListener('change', (e) => this.toggleDarkMode(e));
 
-        // Modal close events
         document.querySelectorAll('.modal').forEach(modal => {
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) {
@@ -135,7 +132,6 @@ class EternalFlowApp {
             });
         });
 
-        // Title character counter
         document.getElementById('eventTitle').addEventListener('input', (e) => {
             const counter = document.getElementById('eventTitleCounter');
             const value = e.target.value;
@@ -147,7 +143,6 @@ class EternalFlowApp {
             }
         });
 
-        // Close modals with Escape key
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 document.querySelectorAll('.modal.show').forEach(modal => {
@@ -156,11 +151,48 @@ class EternalFlowApp {
             }
         });
 
-        // PWA installation
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             this.deferredPrompt = e;
+            document.getElementById('installBtn').style.display = 'block';
         });
+
+        document.getElementById('installBtn').addEventListener('click', async () => {
+            if (this.deferredPrompt) {
+                this.deferredPrompt.prompt();
+                const { outcome } = await this.deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    this.deferredPrompt = null;
+                    document.getElementById('installBtn').style.display = 'none';
+                }
+            }
+        });
+
+        window.addEventListener('appinstalled', () => {
+            this.deferredPrompt = null;
+            document.getElementById('installBtn').style.display = 'none';
+        });
+    }
+
+    setupPWAInstall() {
+        if (window.matchMedia('(display-mode: standalone)').matches) {
+            document.getElementById('installBtn').style.display = 'none';
+        }
+    }
+
+    setupDarkMode() {
+        const isDarkMode = localStorage.getItem('darkMode') === 'true' || 
+                          (window.matchMedia('(prefers-color-scheme: dark)').matches && 
+                           localStorage.getItem('darkMode') !== 'false');
+        document.getElementById('darkModeToggle').checked = isDarkMode;
+        
+        if (isDarkMode) {
+            document.documentElement.style.setProperty('--background', '#000000');
+            document.documentElement.style.setProperty('--surface', '#1C1C1E');
+            document.documentElement.style.setProperty('--surface-variant', '#2C2C2E');
+            document.documentElement.style.setProperty('--text', '#FFFFFF');
+            document.documentElement.style.setProperty('--text-secondary', 'rgba(235, 235, 245, 0.6)');
+        }
     }
 
     setupTabBar() {
@@ -168,8 +200,7 @@ class EternalFlowApp {
         tabItems.forEach(tab => {
             tab.addEventListener('click', () => {
                 const tabName = tab.getAttribute('data-tab');
-                
-                // Update active tab
+
                 tabItems.forEach(t => t.classList.remove('active'));
                 tab.classList.add('active');
                 
@@ -582,7 +613,6 @@ class EternalFlowApp {
     openSettingsModal() {
         document.getElementById('settingsModal').classList.add('show');
         
-        // Set current dark mode preference
         const isDarkMode = localStorage.getItem('darkMode') === 'true' || 
                           (window.matchMedia('(prefers-color-scheme: dark)').matches && 
                            localStorage.getItem('darkMode') !== 'false');
@@ -613,7 +643,6 @@ class EternalFlowApp {
         notification.textContent = message;
         notification.className = `notification ${type} show`;
         
-        // Show in Dynamic Island on iOS
         const dynamicIsland = document.getElementById('dynamicIsland');
         dynamicIsland.textContent = message;
         dynamicIsland.classList.add('visible');
@@ -732,7 +761,6 @@ document.addEventListener('DOMContentLoaded', () => {
             .then(registration => {
                 console.log('SW registered: ', registration);
                 
-                // Check for updates every 24 hours
                 setInterval(() => {
                     registration.update();
                 }, 24 * 60 * 60 * 1000);

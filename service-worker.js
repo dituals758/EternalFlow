@@ -6,9 +6,11 @@ const PRECACHE_URLS = [
     './index.html',
     './styles.css',
     './app.js',
+    './config.js',
     './manifest.json',
-    './icon-192.png',
-    './icon-512.png'
+    './icons/icon-32.png',
+    './icons/icon-192.png',
+    './icons/icon-512.png'
 ];
 
 self.addEventListener('install', event => {
@@ -36,7 +38,6 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
     if (event.request.method !== 'GET') return;
     
-    // Don't cache IndexedDB requests
     if (event.request.url.includes('/EternalFlowDB')) {
         return;
     }
@@ -44,14 +45,11 @@ self.addEventListener('fetch', event => {
     event.respondWith(
         caches.match(event.request)
             .then(cachedResponse => {
-                // Return cached response if found
                 if (cachedResponse) {
                     return cachedResponse;
                 }
 
-                // Otherwise make network request
                 return fetch(event.request).then(response => {
-                    // Check if valid response
                     if (!response || response.status !== 200 || response.type !== 'basic') {
                         return response;
                     }
@@ -62,7 +60,6 @@ self.addEventListener('fetch', event => {
 
                     return response;
                 }).catch(() => {
-                    // SPA fallback - return index.html for all navigation requests
                     if (event.request.mode === 'navigate') {
                         return caches.match('./index.html');
                     }

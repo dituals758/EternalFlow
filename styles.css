@@ -406,12 +406,12 @@ main {
     font-weight: 700;
     color: var(--text);
     padding: 16px;
-    background: var(--surface-variant);
     border-radius: 12px;
     text-align: center;
     margin: 0;
     background: linear-gradient(135deg, var(--primary), var(--secondary));
     color: white;
+    width: 100%; /* Растягиваем на всю ширину */
 }
 
 .event-actions {
@@ -641,6 +641,7 @@ main {
     display: flex;
     flex-direction: column;
     gap: 8px;
+    position: relative;
 }
 
 .form-group label {
@@ -673,26 +674,40 @@ main {
     color: var(--text-secondary);
 }
 
+/* Исправление иконки календаря */
 #eventDate {
     padding-right: 50px;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2392929E' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 2v4M16 2v4M3 10h18M5 18h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2392929E'%3E%3Cpath d='M8 2v4M16 2v4M3 10h18M5 18h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 16px center;
     background-size: 20px;
 }
 
+@media (prefers-color-scheme: dark) {
+    #eventDate {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23EBEBF5'%3E%3Cpath d='M8 2v4M16 2v4M3 10h18M5 18h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z'/%3E%3C/svg%3E");
+    }
+}
+
 .form-select {
     padding-right: 50px;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2392929E' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2392929E'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 16px center;
     background-size: 16px;
 }
 
-.char-counter {
-    text-align: right;
-    font-size: 14px;
+/* Счетчик символов внутри поля ввода */
+.char-counter-inside {
+    position: absolute;
+    right: 16px;
+    bottom: 16px;
+    font-size: 12px;
     color: var(--text-secondary);
+    background: var(--surface);
+    padding: 2px 6px;
+    border-radius: 10px;
+    pointer-events: none;
 }
 
 .form-actions {
@@ -819,7 +834,7 @@ main {
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: var(--surface-variant);
+    background: var(--surface-variant);
     transition: var(--transition);
     border-radius: 34px;
 }
@@ -837,7 +852,7 @@ main {
 }
 
 input:checked + .slider {
-    background-color: var(--primary);
+    background: var(--primary);
 }
 
 input:checked + .slider:before {
